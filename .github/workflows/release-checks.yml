@@ -15,7 +15,6 @@ jobs:
           TITLE="${{ github.event.pull_request.title }}"
           echo "Checking PR title: $TITLE"
 
-          # Must be exactly "Release X.Y.Z"
           if [[ ! "$TITLE" =~ ^Release\ [0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::PR title must be exactly 'Release X.Y.Z' (e.g., 'Release 1.2.3')"
             exit 1
@@ -36,7 +35,6 @@ jobs:
         run: |
           git fetch origin main
 
-          # Get the diff between the PR branch and main
           DIFF=$(git diff origin/main..HEAD)
 
           if [ -n "$DIFF" ]; then
@@ -54,53 +52,50 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: true
 
-      - name: Setup Rokit
-        uses: CompeyDev/setup-rokit@v0.1.2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
 
       - name: Check formatting
-        run: lune run ./Submodules/luau-cicd/Scripts/CheckFormatting.luau
+        run: bun run format:check
 
-  test:
-    name: Run tests
+  typecheck:
+    name: Type check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: true
 
-      - name: Setup Rokit
-        uses: CompeyDev/setup-rokit@v0.1.2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: wally install
+        run: bun install
 
-      - name: Run tests
-        run: lune run ./Scripts/RunTests.luau
+      - name: Type check
+        run: bun run typecheck
 
-  analyze:
-    name: Static analysis
+  build:
+    name: Build binary
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: true
 
-      - name: Setup Rokit
-        uses: CompeyDev/setup-rokit@v0.1.2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: wally install
+        run: bun install
 
-      - name: Setup Lune typedefs
-        run: lune setup --no-update-luaurc
+      - name: Build
+        run: bun build Source/Cli.ts --compile --outfile Build/bloxgen
 
-      - name: Run static analysis
-        run: lune run ./Submodules/luau-cicd/Scripts/RunStaticAnalysis.luau
+      - name: Verify binary runs
+        run: ./Build/bloxgen version
 
   version:
     name: Validate version
@@ -110,22 +105,48 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
 
-      - name: Setup Rokit
-        uses: CompeyDev/setup-rokit@v0.1.2
+      - name: Check version bump
+        run: |
+          git fetch origin release 2>/dev/null || true
 
-      - name: Check version update
-        run: lune run ./Submodules/luau-cicd/Scripts/EnsureProperVersionUpdate.luau
+          CURRENT=$(cat VERSION | tr -d '[:space:]')
 
-      - name: Check version match
-        run: lune run ./Submodules/luau-cicd/Scripts/CheckVersionMatch.luau
+          if git rev-parse origin/release >/dev/null 2>&1; then
+            PREVIOUS=$(git show origin/release:VERSION 2>/dev/null | tr -d '[:space:]' || echo "0.0.0")
+          else
+            PREVIOUS="0.0.0"
+          fi
+
+          if [ "$CURRENT" = "$PREVIOUS" ]; then
+            echo "::error::VERSION has not been bumped (still $CURRENT)"
+            exit 1
+          fi
+
+          echo "Version bumped from $PREVIOUS to $CURRENT"
+
+      - name: Check VERSION matches package.json
+        run: |
+          FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          PKG_VERSION=$(node -e "console.log(require('./package.json').version)")
+
+          if [ "$FILE_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::VERSION file ($FILE_VERSION) does not match package.json ($PKG_VERSION)"
+            exit 1
+          fi
+
+          echo "Versions match: $FILE_VERSION"
 
       - name: Check changelog entry
-        run: lune run ./Submodules/luau-cicd/Scripts/CheckChangelogVersion.luau
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
 
-      - name: Check changelog format
-        run: lune run ./Submodules/luau-cicd/Scripts/CheckChangelogFormat.luau
+          if ! grep -q "^## $VERSION" CHANGELOG.md; then
+            echo "::error::No changelog entry found for version $VERSION"
+            exit 1
+          fi
+
+          echo "Changelog entry found for $VERSION"
 
       - name: Verify PR title matches VERSION
         run: |

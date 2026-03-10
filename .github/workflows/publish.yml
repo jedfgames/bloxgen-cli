@@ -6,8 +6,67 @@ on:
       - release
 
 jobs:
-  publish:
-    name: Publish release
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            platform: macos-aarch64
+            target: bun-darwin-arm64
+            artifact: bloxgen-macos-aarch64
+          - runner: macos-13
+            platform: macos-x86_64
+            target: bun-darwin-x64
+            artifact: bloxgen-macos-x86_64
+          - runner: ubuntu-latest
+            platform: linux-x86_64
+            target: bun-linux-x64
+            artifact: bloxgen-linux-x86_64
+          - runner: ubuntu-24.04-arm
+            platform: linux-aarch64
+            target: bun-linux-arm64
+            artifact: bloxgen-linux-aarch64
+          - runner: windows-latest
+            platform: windows-x86_64
+            target: bun-windows-x64
+            artifact: bloxgen-windows-x86_64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build binary
+        run: bun build Source/Cli.ts --compile --target=${{ matrix.target }} --outfile Build/${{ matrix.artifact }}
+
+      - name: Zip artifact (unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd Build
+          zip ${{ matrix.artifact }}.zip ${{ matrix.artifact }}
+
+      - name: Zip artifact (windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd Build
+          Compress-Archive -Path ${{ matrix.artifact }} -DestinationPath ${{ matrix.artifact }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: Build/${{ matrix.artifact }}.zip
+
+  release:
+    name: Create release
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,11 +74,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Setup Rokit
-        uses: CompeyDev/setup-rokit@v0.1.2
 
       - name: Get version and changelog
         id: version
@@ -28,7 +82,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
 
-          # Extract changelog for this version
           CHANGELOG=$(awk -v ver="$VERSION" '
             /^## / {
               if (found) exit
@@ -38,8 +91,12 @@ jobs:
             found { print }
           ' CHANGELOG.md | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | sed '/^$/N;/^\n$/d')
 
-          # Write to file for multi-line support
           echo "$CHANGELOG" > /tmp/changelog.txt
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create git tag
         run: |
@@ -48,18 +105,11 @@ jobs:
           git tag ${{ steps.version.outputs.tag }}
           git push origin ${{ steps.version.outputs.tag }}
 
-      - name: Publish to Wally
-        env:
-          WALLY_AUTH: ${{ secrets.WALLY_AUTH }}
-        run: |
-          mkdir -p ~/.wally
-          echo "$WALLY_AUTH" > ~/.wally/auth.toml
-          wally publish
-
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create ${{ steps.version.outputs.tag }} \
             --title "${{ steps.version.outputs.tag }}" \
-            --notes-file /tmp/changelog.txt
+            --notes-file /tmp/changelog.txt \
+            artifacts/**/*.zip

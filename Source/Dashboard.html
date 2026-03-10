@@ -1,0 +1,3005 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Bloxgen Dashboard</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            /* ── Scrollbars ──────────────────────── */
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #30363d;
+                border-radius: 4px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #484f58;
+            }
+            ::-webkit-scrollbar-corner {
+                background: transparent;
+            }
+
+            body {
+                font-family: "Consolas", "Monaco", "Courier New", monospace;
+                background: #0d1117;
+                color: #c9d1d9;
+                height: 100vh;
+                display: grid;
+                grid-template-rows: 48px 1fr;
+                grid-template-columns: 1fr;
+                overflow: hidden;
+            }
+            .body-content {
+                display: flex;
+                overflow: hidden;
+            }
+
+            /* ── Top Bar ───────────────────────── */
+            .topbar {
+                grid-column: 1 / -1;
+                background: #161b22;
+                border-bottom: 1px solid #30363d;
+                display: flex;
+                align-items: center;
+                padding: 0 16px;
+                gap: 12px;
+            }
+            .topbar h1 {
+                font-size: 15px;
+                font-weight: 600;
+                color: #58a6ff;
+                letter-spacing: 1px;
+                flex: 1;
+            }
+            .topbar button {
+                padding: 6px 16px;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .topbar button:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            #btn-start {
+                background: #238636;
+                color: #fff;
+                border-color: #2ea043;
+            }
+            #btn-start:hover:not(:disabled) {
+                background: #2ea043;
+            }
+            #btn-resume {
+                background: #1f6feb;
+                color: #fff;
+                border-color: #388bfd;
+            }
+            #btn-resume:hover:not(:disabled) {
+                background: #388bfd;
+            }
+            #btn-critic {
+                background: #9e6a03;
+                color: #fff;
+                border-color: #d29922;
+            }
+            #btn-critic:hover:not(:disabled) {
+                background: #d29922;
+            }
+            #btn-stop-after {
+                background: #b08800;
+                color: #fff;
+                border-color: #d29922;
+            }
+            #btn-stop-after:hover:not(:disabled) {
+                background: #d29922;
+            }
+            #btn-stop {
+                background: #da3633;
+                color: #fff;
+                border-color: #f85149;
+            }
+            #btn-stop:hover:not(:disabled) {
+                background: #f85149;
+            }
+            #btn-kill-mcp {
+                background: #30363d;
+                color: #c9d1d9;
+                border-color: #484f58;
+            }
+            #btn-kill-mcp:hover:not(:disabled) {
+                background: #484f58;
+            }
+
+            /* ── More menu (grouped lesser-used buttons) ── */
+            .more-menu-wrapper {
+                position: relative;
+            }
+            #btn-more {
+                background: #30363d;
+                color: #c9d1d9;
+                border-color: #484f58;
+            }
+            #btn-more:hover {
+                background: #484f58;
+            }
+            .more-dropdown {
+                display: none;
+                position: absolute;
+                top: 100%;
+                right: 0;
+                margin-top: 4px;
+                background: #1c2128;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 4px 0;
+                min-width: 180px;
+                z-index: 100;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            }
+            .more-dropdown.open {
+                display: block;
+            }
+            .more-dropdown button {
+                display: block;
+                width: 100%;
+                text-align: left;
+                background: transparent;
+                color: #c9d1d9;
+                border: none;
+                border-radius: 0;
+                padding: 8px 16px;
+                font-family: inherit;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            .more-dropdown button:hover:not(:disabled) {
+                background: #30363d;
+            }
+            .more-dropdown button:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+
+            /* ── Status badge ──────────────────── */
+            .status-badge {
+                padding: 3px 10px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .status-idle {
+                background: #30363d;
+                color: #8b949e;
+            }
+            .status-running {
+                background: #1b4721;
+                color: #3fb950;
+            }
+            .status-stopping {
+                background: #5a1e02;
+                color: #f0883e;
+            }
+            .status-stopping_graceful {
+                background: #3d2e00;
+                color: #d29922;
+            }
+
+            /* ── Sidebar ───────────────────────── */
+            .sidebar {
+                background: #161b22;
+                border-right: 1px solid #30363d;
+                padding: 16px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                width: 220px;
+                min-width: 160px;
+                max-width: 500px;
+                flex-shrink: 0;
+            }
+            .sidebar-section {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .sidebar-label {
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #484f58;
+                margin-bottom: 2px;
+            }
+            .sidebar-value {
+                font-size: 20px;
+                font-weight: 700;
+                color: #e6edf3;
+            }
+            .sidebar-value.mode-build {
+                color: #3fb950;
+            }
+            .sidebar-value.mode-ideate {
+                color: #a371f7;
+            }
+            .sidebar-value.mode-critic {
+                color: #f0883e;
+            }
+            .sidebar-value.mode-refine {
+                color: #d29922;
+            }
+
+            .sidebar-divider {
+                border: none;
+                border-top: 1px solid #21262d;
+                margin: 4px 0;
+            }
+
+            /* ── Step Progress ─────────────────── */
+            .step-list {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .step-item {
+                font-size: 11px;
+                padding: 2px 6px;
+                border-radius: 3px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: #484f58;
+            }
+            .step-item::before {
+                content: "";
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #30363d;
+                flex-shrink: 0;
+            }
+            .step-done {
+                color: #3fb950;
+            }
+            .step-done::before {
+                background: #3fb950;
+            }
+            .step-current {
+                color: #f0883e;
+                font-weight: 700;
+                background: rgba(240, 136, 62, 0.1);
+            }
+            .step-current::before {
+                background: #f0883e;
+                box-shadow: 0 0 6px #f0883e;
+                animation: pulse 1.5s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.4;
+                }
+            }
+
+            /* ── Task Queue ────────────────────── */
+            .queue-list {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                max-height: 260px;
+                overflow-y: auto;
+            }
+            .queue-item {
+                font-size: 11px;
+                padding: 4px 6px;
+                border-radius: 3px;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                color: #8b949e;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .queue-item:hover {
+                background: #1c2128;
+            }
+            .queue-item-header {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .queue-item-num {
+                color: #484f58;
+                font-size: 10px;
+                min-width: 14px;
+                text-align: right;
+            }
+            .queue-item-id {
+                color: #58a6ff;
+                font-size: 10px;
+                flex-shrink: 0;
+            }
+            .queue-item-name {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .queue-item:first-child .queue-item-header {
+                color: #f0883e;
+                font-weight: 600;
+            }
+            .queue-item:first-child .queue-item-id {
+                color: #f0883e;
+            }
+            .queue-item-details {
+                display: none;
+                padding: 4px 0 2px 20px;
+                font-size: 10px;
+                color: #8b949e;
+                flex-direction: column;
+                gap: 2px;
+                border-left: 2px solid #30363d;
+                margin-left: 8px;
+            }
+            .queue-item.expanded .queue-item-details {
+                display: flex;
+            }
+            .queue-detail-row {
+                display: flex;
+                gap: 4px;
+            }
+            .queue-detail-label {
+                color: #484f58;
+                min-width: 70px;
+                flex-shrink: 0;
+            }
+            .queue-detail-value {
+                color: #c9d1d9;
+            }
+            .complexity-badge {
+                display: inline-block;
+                padding: 0 5px;
+                border-radius: 3px;
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .complexity-haiku {
+                background: #1a3a2a;
+                color: #3fb950;
+            }
+            .complexity-sonnet {
+                background: #1a2a3a;
+                color: #58a6ff;
+            }
+            .complexity-opus {
+                background: #2a1a3a;
+                color: #a371f7;
+            }
+
+            /* ── Resize Handle ──────────────────── */
+            .resize-handle {
+                width: 4px;
+                cursor: col-resize;
+                background: transparent;
+                transition: background 0.15s;
+                flex-shrink: 0;
+            }
+            .resize-handle:hover,
+            .resize-handle.active {
+                background: #58a6ff;
+            }
+
+            /* ── Stats ─────────────────────────── */
+            .stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .stat {
+                text-align: center;
+                padding: 6px;
+                background: #0d1117;
+                border-radius: 6px;
+                border: 1px solid #21262d;
+            }
+            .stat-value {
+                font-size: 18px;
+                font-weight: 700;
+                color: #e6edf3;
+            }
+            .stat-label {
+                font-size: 9px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #484f58;
+            }
+
+            /* ── Main Output ───────────────────── */
+            .output {
+                padding: 12px 16px;
+                overflow-y: auto;
+                font-size: 12px;
+                line-height: 1.6;
+                scroll-behavior: smooth;
+            }
+            .entry {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                margin-bottom: 2px;
+            }
+            .entry-text {
+                color: #c9d1d9;
+            }
+            .entry-tool {
+                color: #58a6ff;
+                padding-left: 8px;
+                border-left: 2px solid #1f6feb33;
+            }
+            .entry-step {
+                color: #f0883e;
+                font-weight: 700;
+                padding: 6px 0;
+                margin: 8px 0;
+                border-top: 1px solid #21262d;
+                border-bottom: 1px solid #21262d;
+            }
+            .entry-signal {
+                color: #f9c74f;
+                font-weight: 700;
+                padding: 6px 10px;
+                background: rgba(249, 199, 79, 0.08);
+                border-left: 3px solid #f9c74f;
+                margin: 8px 0;
+                border-radius: 0 4px 4px 0;
+            }
+            .entry-error {
+                color: #f85149;
+                font-weight: 700;
+            }
+
+            /* ── Token bar ───────────────────────── */
+            .token-section {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .token-bar-wrap {
+                background: #21262d;
+                border-radius: 4px;
+                height: 8px;
+                overflow: hidden;
+            }
+            .token-bar {
+                height: 100%;
+                background: #3fb950;
+                border-radius: 4px;
+                transition:
+                    width 0.5s ease,
+                    background 0.3s;
+            }
+            .token-bar.warn {
+                background: #f0883e;
+            }
+            .token-bar.danger {
+                background: #f85149;
+            }
+            .token-row {
+                display: flex;
+                justify-content: space-between;
+                font-size: 10px;
+                color: #8b949e;
+            }
+            .token-cost {
+                font-size: 14px;
+                font-weight: 700;
+                color: #e6edf3;
+            }
+
+            /* ── Tabs ────────────────────────────── */
+            .main-area {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                flex: 1;
+                min-width: 0;
+            }
+            .tab-bar {
+                display: flex;
+                background: #161b22;
+                border-bottom: 1px solid #30363d;
+                padding: 0 12px;
+                gap: 0;
+                flex-shrink: 0;
+            }
+            .tab {
+                padding: 8px 16px;
+                font-size: 12px;
+                font-family: inherit;
+                color: #8b949e;
+                background: none;
+                border: none;
+                border-bottom: 2px solid transparent;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .tab:hover {
+                color: #c9d1d9;
+            }
+            .tab.active {
+                color: #e6edf3;
+                border-bottom-color: #58a6ff;
+            }
+            .tab-content {
+                display: none;
+                flex: 1;
+                overflow: hidden;
+            }
+            .tab-content.active {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+            }
+
+            /* ── History table ──────────────────── */
+            .history-wrap {
+                overflow-y: auto;
+                padding: 12px 16px;
+                flex: 1;
+            }
+            .history-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+            }
+            .history-table th {
+                text-align: left;
+                padding: 6px 8px;
+                color: #484f58;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 1px solid #30363d;
+                position: sticky;
+                top: 0;
+                background: #0d1117;
+            }
+            .history-table td {
+                padding: 6px 8px;
+                border-bottom: 1px solid #21262d;
+                color: #c9d1d9;
+            }
+            .history-table tr:hover td {
+                background: #161b2244;
+            }
+            .history-result {
+                max-width: 300px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .history-error {
+                color: #f85149;
+            }
+            .history-ok {
+                color: #3fb950;
+            }
+
+            /* ── User tab ────────────────────────── */
+            .user-wrap {
+                overflow-y: auto;
+                padding: 16px 20px;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            .user-section-title {
+                font-size: 13px;
+                font-weight: 700;
+                color: #58a6ff;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+            }
+            .user-category {
+                font-size: 11px;
+                font-weight: 600;
+                color: #8b949e;
+                margin-top: 8px;
+                margin-bottom: 2px;
+            }
+            .user-task {
+                font-size: 12px;
+                padding: 4px 8px;
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                color: #c9d1d9;
+                line-height: 1.4;
+            }
+            .user-task-check {
+                flex-shrink: 0;
+                width: 14px;
+                height: 14px;
+                border: 1px solid #30363d;
+                border-radius: 3px;
+                margin-top: 2px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                color: #3fb950;
+                background: #0d1117;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .user-task-check:hover {
+                border-color: #58a6ff;
+            }
+            .user-task-check.done {
+                border-color: #3fb950;
+                background: #1b4721;
+            }
+            .user-task-text.done {
+                color: #484f58;
+                text-decoration: line-through;
+            }
+            .user-tasks-empty {
+                font-size: 12px;
+                color: #484f58;
+                font-style: italic;
+                padding: 4px 8px;
+            }
+            .feedback-messages {
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .feedback-msg {
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 8px 10px;
+                background: #161b22;
+                border: 1px solid #21262d;
+                border-radius: 6px;
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            .feedback-msg:hover {
+                border-color: #30363d;
+            }
+            .feedback-msg-ts {
+                flex-shrink: 0;
+                font-size: 10px;
+                color: #484f58;
+                margin-top: 2px;
+                min-width: 90px;
+            }
+            .feedback-msg-text {
+                flex: 1;
+                color: #c9d1d9;
+                word-break: break-word;
+            }
+            .feedback-msg-actions {
+                flex-shrink: 0;
+                display: flex;
+                gap: 4px;
+                opacity: 0;
+                transition: opacity 0.15s;
+            }
+            .feedback-msg:hover .feedback-msg-actions {
+                opacity: 1;
+            }
+            .feedback-msg-btn {
+                padding: 2px 6px;
+                font-size: 10px;
+                font-family: inherit;
+                background: none;
+                border: 1px solid #30363d;
+                border-radius: 3px;
+                color: #8b949e;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .feedback-msg-btn:hover {
+                color: #c9d1d9;
+                border-color: #484f58;
+            }
+            .feedback-msg-btn.delete:hover {
+                color: #f85149;
+                border-color: #f85149;
+            }
+            .feedback-msg-edit {
+                flex: 1;
+                background: #0d1117;
+                color: #c9d1d9;
+                border: 1px solid #58a6ff;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-family: inherit;
+                font-size: 12px;
+                outline: none;
+            }
+            .feedback-input-bar {
+                display: flex;
+                gap: 8px;
+                padding-top: 8px;
+                border-top: 1px solid #21262d;
+                flex-shrink: 0;
+            }
+            .feedback-input {
+                flex: 1;
+                background: #0d1117;
+                color: #c9d1d9;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-family: inherit;
+                font-size: 12px;
+                outline: none;
+            }
+            .feedback-input:focus {
+                border-color: #58a6ff;
+            }
+            .feedback-send {
+                padding: 8px 16px;
+                background: #238636;
+                color: #fff;
+                border: 1px solid #2ea043;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.15s;
+                flex-shrink: 0;
+            }
+            .feedback-send:hover {
+                background: #2ea043;
+            }
+            .feedback-send:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            .feedback-empty {
+                font-size: 12px;
+                color: #484f58;
+                font-style: italic;
+                padding: 12px 0;
+                text-align: center;
+            }
+
+            /* ── Chat tab ───────────────────────── */
+            .chat-wrap {
+                padding: 16px 20px;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                padding-bottom: 12px;
+            }
+            .chat-msg {
+                padding: 10px 14px;
+                border-radius: 8px;
+                font-size: 13px;
+                line-height: 1.5;
+                max-width: 85%;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+            }
+            .chat-msg.user {
+                background: #1f6feb;
+                color: #fff;
+                align-self: flex-end;
+                border-bottom-right-radius: 2px;
+            }
+            .chat-msg.assistant {
+                background: #21262d;
+                color: #c9d1d9;
+                align-self: flex-start;
+                border-bottom-left-radius: 2px;
+                border: 1px solid #30363d;
+            }
+            .chat-msg.assistant.streaming {
+                border-color: #58a6ff;
+            }
+            .chat-msg .bug-badge {
+                display: inline-block;
+                background: #da3633;
+                color: #fff;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 10px;
+                margin-top: 8px;
+            }
+            .chat-input-bar {
+                display: flex;
+                gap: 8px;
+                padding-top: 12px;
+                border-top: 1px solid #21262d;
+            }
+            .chat-input {
+                flex: 1;
+                background: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                color: #c9d1d9;
+                padding: 8px 12px;
+                font-family: inherit;
+                font-size: 13px;
+                outline: none;
+            }
+            .chat-input:focus {
+                border-color: #58a6ff;
+            }
+            .chat-send {
+                background: #238636;
+                color: #fff;
+                border: 1px solid #2ea043;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-family: inherit;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.15s;
+                flex-shrink: 0;
+            }
+            .chat-send:hover {
+                background: #2ea043;
+            }
+            .chat-send:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            .chat-empty {
+                color: #484f58;
+                font-size: 12px;
+                font-style: italic;
+                text-align: center;
+                padding: 40px 0;
+            }
+
+            /* ── Progression tab ─────────────────── */
+            .sim-wrap {
+                padding: 16px 20px;
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .sim-toolbar {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-shrink: 0;
+            }
+            .sim-run-btn {
+                padding: 8px 20px;
+                background: #1f6feb;
+                color: #fff;
+                border: 1px solid #388bfd;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .sim-run-btn:hover {
+                background: #388bfd;
+            }
+            .sim-run-btn:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            .sim-status {
+                font-size: 11px;
+                color: #8b949e;
+            }
+            .sim-results {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .sim-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .sim-label {
+                width: 80px;
+                flex-shrink: 0;
+                font-size: 12px;
+                font-weight: 600;
+                color: #e6edf3;
+                text-align: right;
+            }
+            .sim-bar {
+                flex: 1;
+                height: 28px;
+                background: #21262d;
+                border-radius: 4px;
+                display: flex;
+                overflow: hidden;
+                position: relative;
+            }
+            .sim-segment {
+                height: 100%;
+                position: relative;
+                transition: opacity 0.15s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+            .sim-segment:hover {
+                opacity: 0.8;
+            }
+            .sim-segment-label {
+                font-size: 9px;
+                color: rgba(255, 255, 255, 0.9);
+                white-space: nowrap;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+                pointer-events: none;
+            }
+            .sim-segment-unreached {
+                background: repeating-linear-gradient(
+                    45deg,
+                    #21262d,
+                    #21262d 4px,
+                    #30363d 4px,
+                    #30363d 8px
+                );
+                flex: 1;
+            }
+            .sim-tooltip {
+                position: fixed;
+                background: #1c2128;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 11px;
+                color: #e6edf3;
+                pointer-events: none;
+                z-index: 100;
+                display: none;
+                white-space: nowrap;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            }
+            .sim-legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 16px;
+                padding-top: 8px;
+                border-top: 1px solid #21262d;
+            }
+            .sim-legend-item {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 10px;
+                color: #8b949e;
+            }
+            .sim-legend-swatch {
+                width: 10px;
+                height: 10px;
+                border-radius: 2px;
+                flex-shrink: 0;
+            }
+            .sim-time-label {
+                font-size: 10px;
+                color: #484f58;
+                width: 80px;
+                flex-shrink: 0;
+            }
+            .sim-time-axis {
+                flex: 1;
+                display: flex;
+                justify-content: space-between;
+                font-size: 10px;
+                color: #484f58;
+            }
+
+            /* ── Agents tab ────────────────────── */
+            .agents-wrap {
+                padding: 16px 20px;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                gap: 12px;
+            }
+            .agents-toolbar {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-shrink: 0;
+            }
+            .agents-toolbar select {
+                background: #0d1117;
+                color: #c9d1d9;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-family: inherit;
+                font-size: 12px;
+                outline: none;
+                min-width: 200px;
+            }
+            .agents-toolbar select:focus {
+                border-color: #58a6ff;
+            }
+            .agents-start-btn {
+                padding: 8px 20px;
+                background: #8957e5;
+                color: #fff;
+                border: 1px solid #a371f7;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .agents-start-btn:hover {
+                background: #a371f7;
+            }
+            .agents-start-btn:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            .agents-stop-btn {
+                padding: 8px 16px;
+                background: #da3633;
+                color: #fff;
+                border: 1px solid #f85149;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .agents-stop-btn:hover {
+                background: #f85149;
+            }
+            .agents-stop-btn:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            .agents-reset-btn {
+                padding: 8px 16px;
+                background: #30363d;
+                color: #c9d1d9;
+                border: 1px solid #484f58;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .agents-reset-btn:hover {
+                background: #484f58;
+            }
+            .agents-phase {
+                font-size: 12px;
+                font-weight: 600;
+                padding: 3px 10px;
+                border-radius: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .agents-phase-idle {
+                background: #30363d;
+                color: #8b949e;
+            }
+            .agents-phase-coding {
+                background: #1b4721;
+                color: #3fb950;
+            }
+            .agents-phase-merging {
+                background: #3d2e00;
+                color: #d29922;
+            }
+            .agents-phase-testing {
+                background: #1f3368;
+                color: #58a6ff;
+            }
+            .agents-phase-done {
+                background: #272e37;
+                color: #8b949e;
+            }
+
+            .agents-body {
+                display: flex;
+                flex: 1;
+                gap: 12px;
+                min-height: 0;
+                overflow: hidden;
+            }
+            .agents-list {
+                width: 280px;
+                flex-shrink: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                overflow-y: auto;
+            }
+            .agent-card {
+                padding: 10px 12px;
+                background: #161b22;
+                border: 1px solid #21262d;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .agent-card:hover {
+                border-color: #30363d;
+            }
+            .agent-card.selected {
+                border-color: #58a6ff;
+                background: #0d1117;
+            }
+            .agent-card-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 4px;
+            }
+            .agent-card-id {
+                font-size: 13px;
+                font-weight: 700;
+                color: #58a6ff;
+            }
+            .agent-card-status {
+                font-size: 10px;
+                font-weight: 600;
+                padding: 2px 8px;
+                border-radius: 10px;
+                text-transform: uppercase;
+            }
+            .agent-status-coding {
+                background: #1b4721;
+                color: #3fb950;
+            }
+            .agent-status-done {
+                background: #272e37;
+                color: #3fb950;
+            }
+            .agent-status-failed {
+                background: #5a1e02;
+                color: #f85149;
+            }
+            .agent-card-name {
+                font-size: 11px;
+                color: #8b949e;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .agent-card-meta {
+                font-size: 10px;
+                color: #484f58;
+                margin-top: 4px;
+            }
+            .agent-card-test {
+                padding: 10px 12px;
+                background: #161b22;
+                border: 1px solid #21262d;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .agent-card-test:hover {
+                border-color: #30363d;
+            }
+            .agent-card-test.selected {
+                border-color: #58a6ff;
+                background: #0d1117;
+            }
+
+            .agent-output {
+                flex: 1;
+                background: #0d1117;
+                border: 1px solid #21262d;
+                border-radius: 8px;
+                overflow-y: auto;
+                padding: 12px 16px;
+                font-size: 12px;
+                line-height: 1.6;
+                min-height: 0;
+            }
+            .agent-output-empty {
+                color: #484f58;
+                font-style: italic;
+                padding: 40px 0;
+                text-align: center;
+            }
+
+            /* ── Empty state ───────────────────── */
+            .empty-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                gap: 12px;
+                color: #484f58;
+            }
+            .empty-state-icon {
+                font-size: 48px;
+                opacity: 0.3;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Top Bar -->
+        <div class="topbar">
+            <h1>BLOXGEN DASHBOARD</h1>
+            <span id="status-badge" class="status-badge status-idle">IDLE</span>
+            <button id="btn-start" onclick="startLoop()">Start</button>
+            <button id="btn-resume" onclick="startLoop(true)" disabled>
+                Resume
+            </button>
+            <button id="btn-stop" onclick="stopLoop()" disabled>Stop</button>
+            <div class="more-menu-wrapper">
+                <button id="btn-more" onclick="toggleMoreMenu(event)">
+                    More &#9662;
+                </button>
+                <div id="more-dropdown" class="more-dropdown">
+                    <button
+                        id="btn-critic"
+                        onclick="
+                            startCritic();
+                            closeMoreMenu();
+                        "
+                    >
+                        Critic
+                    </button>
+                    <button
+                        id="btn-stop-after"
+                        onclick="
+                            stopAfterIteration();
+                            closeMoreMenu();
+                        "
+                        disabled
+                    >
+                        Stop After Iteration
+                    </button>
+                    <button
+                        id="btn-kill-mcp"
+                        onclick="
+                            killStaleMcp();
+                            closeMoreMenu();
+                        "
+                    >
+                        Kill MCP
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Body Content (sidebar + resize handle + main) -->
+        <div class="body-content">
+            <!-- Sidebar -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Iteration</span>
+                    <span class="sidebar-value" id="iteration">0</span>
+                </div>
+
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Mode</span>
+                    <span class="sidebar-value" id="mode">IDLE</span>
+                </div>
+
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Critic Model</span>
+                    <select
+                        id="critic-model"
+                        onchange="setCriticModel(this.value)"
+                        style="
+                            background: #161b22;
+                            color: #c9d1d9;
+                            border: 1px solid #30363d;
+                            border-radius: 4px;
+                            padding: 2px 6px;
+                            font-size: 12px;
+                            font-family: inherit;
+                            cursor: pointer;
+                        "
+                    >
+                        <option value="haiku">haiku</option>
+                        <option value="sonnet">sonnet</option>
+                        <option value="opus">opus</option>
+                    </select>
+                </div>
+
+                <div class="sidebar-section">
+                    <label
+                        style="
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            cursor: pointer;
+                        "
+                    >
+                        <span class="sidebar-label" style="margin: 0"
+                            >Refinement Mode</span
+                        >
+                        <input
+                            type="checkbox"
+                            id="refinement-toggle"
+                            onchange="setRefinementMode(this.checked)"
+                            style="cursor: pointer; accent-color: #d29922"
+                        />
+                    </label>
+                </div>
+
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Feature</span>
+                    <span
+                        id="feature-id"
+                        style="font-size: 13px; color: #8b949e"
+                        >—</span
+                    >
+                </div>
+
+                <hr class="sidebar-divider" />
+
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Task Queue</span>
+                    <div class="queue-list" id="queue-list">
+                        <div
+                            style="
+                                color: #484f58;
+                                font-size: 11px;
+                                font-style: italic;
+                            "
+                        >
+                            No planned tasks
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="sidebar-divider" />
+
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Steps</span>
+                    <div class="step-list" id="step-list"></div>
+                </div>
+
+                <hr class="sidebar-divider" />
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="stat-built">0</div>
+                        <div class="stat-label">Built</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="stat-ideated">0</div>
+                        <div class="stat-label">Ideated</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="stat-queue">0</div>
+                        <div class="stat-label">Queue</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="stat-iter-time">—</div>
+                        <div class="stat-label">Iter Time</div>
+                    </div>
+                    <div class="stat" style="grid-column: 1 / -1">
+                        <div class="stat-value" id="stat-total-time">—</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                </div>
+
+                <hr class="sidebar-divider" />
+
+                <div class="token-section">
+                    <span class="sidebar-label">Context Usage</span>
+                    <div class="token-bar-wrap">
+                        <div
+                            class="token-bar"
+                            id="token-bar"
+                            style="width: 0%"
+                        ></div>
+                    </div>
+                    <div class="token-row">
+                        <span id="token-used">0</span>
+                        <span id="token-total">200k</span>
+                    </div>
+                    <div class="token-row">
+                        <span>Output</span>
+                        <span id="token-output">0</span>
+                    </div>
+                    <div class="token-row">
+                        <span>Turns</span>
+                        <span id="token-turns">0</span>
+                    </div>
+                    <hr class="sidebar-divider" />
+                    <span class="sidebar-label">Monthly Budget</span>
+                    <div class="token-bar-wrap">
+                        <div
+                            class="token-bar"
+                            id="budget-bar"
+                            style="width: 0%"
+                        ></div>
+                    </div>
+                    <div class="token-row">
+                        <span id="budget-used">$0.00</span>
+                        <span id="budget-cap">$200</span>
+                    </div>
+                    <div class="token-row">
+                        <span>This session</span>
+                        <span id="budget-session">$0.00</span>
+                    </div>
+                    <div class="token-row">
+                        <span>This iteration</span>
+                        <span id="budget-iter">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resize Handle -->
+            <div class="resize-handle" id="resize-handle"></div>
+
+            <!-- Main Area with Tabs -->
+            <div class="main-area">
+                <div class="tab-bar">
+                    <button class="tab active" onclick="switchTab('output')">
+                        Live Output
+                    </button>
+                    <button class="tab" onclick="switchTab('history')">
+                        History
+                    </button>
+                    <button class="tab" onclick="switchTab('user')">
+                        User
+                    </button>
+                    <button class="tab" onclick="switchTab('progression')">
+                        Progression
+                    </button>
+                    <button class="tab" onclick="switchTab('chat')">
+                        Chat
+                    </button>
+                    <button class="tab" onclick="switchTab('agents')">
+                        Agents
+                    </button>
+                </div>
+                <div class="tab-content active" id="tab-output">
+                    <div class="output" id="output">
+                        <div class="empty-state" id="empty-state">
+                            <div class="empty-state-icon">&#9654;</div>
+                            <div>
+                                Click <b>Start</b> to begin a new Bloxgen loop,
+                                or <b>Resume</b> to continue from a checkpoint.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-history">
+                    <div class="history-wrap">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Iter</th>
+                                    <th>Duration</th>
+                                    <th>Turns</th>
+                                    <th>Output Tokens</th>
+                                    <th>Cost</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-user">
+                    <div class="user-wrap">
+                        <div>
+                            <div class="user-section-title">User Tasks</div>
+                            <div id="user-tasks"></div>
+                        </div>
+                        <div
+                            style="
+                                display: flex;
+                                flex-direction: column;
+                                flex: 1;
+                                min-height: 0;
+                            "
+                        >
+                            <div class="user-section-title">Feedback</div>
+                            <p
+                                style="
+                                    font-size: 11px;
+                                    color: #8b949e;
+                                    margin-bottom: 8px;
+                                "
+                            >
+                                Bugs, ideas, or things that feel off. Bloxgen
+                                reads this before planning new work.
+                            </p>
+                            <div
+                                class="feedback-messages"
+                                id="feedback-messages"
+                            ></div>
+                            <div class="feedback-input-bar">
+                                <input
+                                    class="feedback-input"
+                                    id="feedback-input"
+                                    type="text"
+                                    placeholder="Type a message..."
+                                    onkeydown="
+                                        if (event.key === 'Enter')
+                                            sendFeedback();
+                                    "
+                                />
+                                <button
+                                    class="feedback-send"
+                                    onclick="sendFeedback()"
+                                >
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-progression">
+                    <div class="sim-wrap">
+                        <div class="sim-toolbar">
+                            <button
+                                class="sim-run-btn"
+                                id="btn-run-sim"
+                                onclick="runSim()"
+                            >
+                                Run Progression Sim
+                            </button>
+                            <span class="sim-status" id="sim-status"></span>
+                        </div>
+                        <div class="sim-results" id="sim-results">
+                            <div
+                                style="
+                                    color: #484f58;
+                                    font-size: 12px;
+                                    font-style: italic;
+                                    padding: 24px 0;
+                                    text-align: center;
+                                "
+                            >
+                                Click "Run Progression Sim" to visualize
+                                milestone timings across player strategies.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sim-tooltip" id="sim-tooltip"></div>
+                </div>
+                <div class="tab-content" id="tab-chat">
+                    <div class="chat-wrap">
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="chat-empty">
+                                Ask anything about your game. If something
+                                sounds broken, it will be filed as a bug
+                                automatically.
+                            </div>
+                        </div>
+                        <div class="chat-input-bar">
+                            <input
+                                class="chat-input"
+                                id="chat-input"
+                                type="text"
+                                placeholder="Ask a question about your game..."
+                                onkeydown="
+                                    if (
+                                        event.key === 'Enter' &&
+                                        !event.shiftKey
+                                    )
+                                        sendChat();
+                                "
+                            />
+                            <button
+                                class="chat-send"
+                                id="chat-send"
+                                onclick="sendChat()"
+                            >
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-agents">
+                    <div class="agents-wrap">
+                        <div class="agents-toolbar">
+                            <select
+                                id="agents-bug-select"
+                                multiple
+                                size="4"
+                            ></select>
+                            <button
+                                class="agents-start-btn"
+                                id="btn-agents-start"
+                                onclick="startParallel()"
+                            >
+                                Start Parallel Fix
+                            </button>
+                            <button
+                                class="agents-stop-btn"
+                                id="btn-agents-stop"
+                                onclick="stopParallel()"
+                                disabled
+                            >
+                                Stop
+                            </button>
+                            <button
+                                class="agents-reset-btn"
+                                id="btn-agents-reset"
+                                onclick="resetParallel()"
+                            >
+                                Reset
+                            </button>
+                            <span
+                                class="agents-phase agents-phase-idle"
+                                id="agents-phase"
+                                >IDLE</span
+                            >
+                        </div>
+                        <div class="agents-body">
+                            <div class="agents-list" id="agents-list">
+                                <div
+                                    style="
+                                        color: #484f58;
+                                        font-size: 12px;
+                                        font-style: italic;
+                                        padding: 12px 0;
+                                        text-align: center;
+                                    "
+                                >
+                                    Select bugs from the dropdown, then click
+                                    "Start Parallel Fix" to spawn agents.
+                                </div>
+                            </div>
+                            <div class="agent-output" id="agent-output">
+                                <div class="agent-output-empty">
+                                    Select an agent to view its output
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- end body-content -->
+
+        <script>
+            // ── Resize handle logic ──────────────────────
+            (function () {
+                const handle = document.getElementById("resize-handle");
+                const sidebar = document.getElementById("sidebar");
+                let dragging = false;
+
+                handle.addEventListener("mousedown", function (e) {
+                    e.preventDefault();
+                    dragging = true;
+                    handle.classList.add("active");
+                    document.body.style.cursor = "col-resize";
+                    document.body.style.userSelect = "none";
+                });
+
+                document.addEventListener("mousemove", function (e) {
+                    if (!dragging) return;
+                    const newWidth = Math.min(500, Math.max(160, e.clientX));
+                    sidebar.style.width = newWidth + "px";
+                });
+
+                document.addEventListener("mouseup", function () {
+                    if (!dragging) return;
+                    dragging = false;
+                    handle.classList.remove("active");
+                    document.body.style.cursor = "";
+                    document.body.style.userSelect = "";
+                });
+            })();
+
+            // ── Step definitions per mode ──────────────────
+            const STEPS = {
+                BUILD: [
+                    "1-PICK",
+                    "2-RESEARCH",
+                    "3-ANALYZE",
+                    "4-PLAN",
+                    "5-REVIEW",
+                    "6-BUILD",
+                    "7-TEST-L",
+                    "8-TEST-S",
+                    "9-REGRESS",
+                    "9.5-PLAYTEST",
+                    "10-DOCUMENT",
+                    "11-SNAPSHOT",
+                    "12-UPDATE",
+                ],
+                IDEATE: [
+                    "1-GUIDE",
+                    "2-CONTEXT",
+                    "3-IDEATE",
+                    "4-PRIORITIZE",
+                    "5-UPDATE-TODO",
+                    "6-UPDATE-GDD",
+                ],
+                CRITIC: [
+                    "1-VISUALS",
+                    "2-GAMEPLAY",
+                    "3-TESTS",
+                    "4-SCAFFOLDING",
+                    "5-LUNE",
+                    "6-REPORT",
+                ],
+            };
+
+            const output = document.getElementById("output");
+            const emptyState = document.getElementById("empty-state");
+            let currentStep = "";
+            let autoScroll = true;
+            let elapsedTimer = null;
+            let startedAt = null;
+            let iterationStartedAt = null;
+
+            // Track scroll position for auto-scroll
+            output.addEventListener("scroll", () => {
+                const atBottom =
+                    output.scrollHeight -
+                        output.scrollTop -
+                        output.clientHeight <
+                    60;
+                autoScroll = atBottom;
+            });
+
+            // ── SSE Connection ─────────────────────────────
+            let evtSource = null;
+
+            function connectSSE() {
+                evtSource = new EventSource("/api/events");
+
+                evtSource.addEventListener("text", (e) => {
+                    appendOutput(JSON.parse(e.data), "text");
+                });
+
+                evtSource.addEventListener("tool", (e) => {
+                    appendOutput(JSON.parse(e.data), "tool");
+                });
+
+                evtSource.addEventListener("step", (e) => {
+                    const step = JSON.parse(e.data);
+                    currentStep = step;
+                    appendOutput("BLOXGEN_STEP: " + step, "step");
+                });
+
+                evtSource.addEventListener("state", (e) => {
+                    const state = JSON.parse(e.data);
+                    updateUI(state);
+                });
+
+                evtSource.addEventListener("signal", (e) => {
+                    const sig = JSON.parse(e.data);
+                    if (sig === "NEW_ITERATION") {
+                        clearOutput();
+                    }
+                    appendOutput(sig, "signal");
+                });
+
+                // Parallel agents events
+                evtSource.addEventListener("parallel", (e) => {
+                    updateParallelState(JSON.parse(e.data));
+                });
+
+                evtSource.addEventListener("parallel-agent", (e) => {
+                    const msg = JSON.parse(e.data);
+                    appendAgentOutput(msg.agentId, {
+                        event: msg.event,
+                        data: msg.data,
+                    });
+                    // Update the output count in parallel data
+                    const agent = parallelData.agents.find(
+                        (a) => a.id === msg.agentId,
+                    );
+                    if (agent) agent.outputCount = (agent.outputCount || 0) + 1;
+                    renderAgentsPanel();
+                });
+
+                evtSource.addEventListener("parallel-test", (e) => {
+                    const msg = JSON.parse(e.data);
+                    appendAgentOutput("test", {
+                        event: msg.event,
+                        data: msg.data,
+                    });
+                    parallelData.testOutputCount =
+                        (parallelData.testOutputCount || 0) + 1;
+                    renderAgentsPanel();
+                });
+
+                evtSource.onerror = () => {
+                    // Auto-reconnect is built into EventSource
+                };
+            }
+
+            // ── Output rendering ───────────────────────────
+            function clearOutput() {
+                while (output.children.length > 1) {
+                    output.removeChild(output.lastChild);
+                }
+            }
+
+            function appendOutput(text, type) {
+                if (emptyState.style.display !== "none") {
+                    emptyState.style.display = "none";
+                }
+
+                const div = document.createElement("div");
+                div.className = `entry entry-${type}`;
+                div.textContent = text;
+                output.appendChild(div);
+
+                // Cap output at 5000 entries
+                while (output.children.length > 5001) {
+                    output.removeChild(output.children[1]); // skip empty-state
+                }
+
+                if (autoScroll) {
+                    output.scrollTop = output.scrollHeight;
+                }
+            }
+
+            // ── UI Update ──────────────────────────────────
+            function updateUI(state) {
+                // Status badge
+                const badge = document.getElementById("status-badge");
+                badge.textContent =
+                    state.status === "stopping_graceful"
+                        ? "FINISHING"
+                        : state.status.toUpperCase();
+                badge.className = `status-badge status-${state.status}`;
+
+                // Buttons
+                document.getElementById("btn-start").disabled =
+                    state.status !== "idle";
+                document.getElementById("btn-resume").disabled =
+                    state.status !== "idle" || !state.hasCheckpoint;
+                document.getElementById("btn-critic").disabled =
+                    state.status === "stopping";
+                document.getElementById("btn-stop-after").disabled =
+                    state.status !== "running";
+                document.getElementById("btn-stop").disabled =
+                    state.status !== "running" &&
+                    state.status !== "stopping_graceful";
+
+                // Sidebar values
+                document.getElementById("iteration").textContent =
+                    state.iteration;
+
+                const modeEl = document.getElementById("mode");
+                modeEl.textContent = state.mode;
+                modeEl.className =
+                    "sidebar-value mode-" + state.mode.toLowerCase();
+
+                // Sync critic model dropdown
+                if (state.criticModel) {
+                    document.getElementById("critic-model").value =
+                        state.criticModel;
+                }
+
+                // Sync refinement mode toggle
+                document.getElementById("refinement-toggle").checked =
+                    !!state.refinementMode;
+
+                document.getElementById("feature-id").textContent =
+                    state.currentFeatureId || "—";
+
+                // Stats
+                document.getElementById("stat-built").textContent =
+                    state.featuresBuilt;
+                document.getElementById("stat-ideated").textContent =
+                    state.featuresIdeated;
+                document.getElementById("stat-queue").textContent =
+                    state.plannedCount;
+
+                // Token stats
+                if (state.tokens) {
+                    const t = state.tokens;
+                    const totalInput = t.inputTokens;
+                    const pct =
+                        t.contextWindow > 0
+                            ? Math.min(
+                                  100,
+                                  (totalInput / t.contextWindow) * 100,
+                              )
+                            : 0;
+                    const bar = document.getElementById("token-bar");
+                    bar.style.width = pct.toFixed(1) + "%";
+                    bar.className =
+                        "token-bar" +
+                        (pct > 80 ? " danger" : pct > 60 ? " warn" : "");
+
+                    document.getElementById("token-used").textContent =
+                        formatTokens(totalInput);
+                    document.getElementById("token-total").textContent =
+                        formatTokens(t.contextWindow);
+                    document.getElementById("token-output").textContent =
+                        formatTokens(t.outputTokens);
+                    document.getElementById("token-turns").textContent =
+                        t.numTurns;
+                }
+
+                // Budget stats
+                const cap = state.monthlyCapUSD || 200;
+                const monthCost = state.monthCostUSD || 0;
+                const budgetPct = Math.min(100, (monthCost / cap) * 100);
+                const budgetBar = document.getElementById("budget-bar");
+                budgetBar.style.width = budgetPct.toFixed(1) + "%";
+                budgetBar.className =
+                    "token-bar" +
+                    (budgetPct > 90
+                        ? " danger"
+                        : budgetPct > 70
+                          ? " warn"
+                          : "");
+                document.getElementById("budget-used").textContent =
+                    "$" + monthCost.toFixed(2);
+                document.getElementById("budget-cap").textContent =
+                    "$" + cap.toFixed(0);
+                document.getElementById("budget-session").textContent =
+                    "$" + (state.sessionCostUSD || 0).toFixed(2);
+                document.getElementById("budget-iter").textContent =
+                    "$" + (state.iterCostUSD || 0).toFixed(2);
+
+                // Task queue
+                updateQueue(state.plannedQueue || []);
+
+                // Step progress
+                updateStepProgress(state.mode, currentStep);
+
+                // Elapsed timers
+                if (
+                    (state.status === "running" ||
+                        state.status === "stopping_graceful") &&
+                    state.startedAt
+                ) {
+                    startedAt = new Date(state.startedAt);
+                    iterationStartedAt = state.iterationStartedAt
+                        ? new Date(state.iterationStartedAt)
+                        : null;
+                    if (!elapsedTimer) {
+                        elapsedTimer = setInterval(updateElapsed, 1000);
+                    }
+                } else {
+                    if (elapsedTimer) {
+                        clearInterval(elapsedTimer);
+                        elapsedTimer = null;
+                    }
+                }
+            }
+
+            function formatElapsed(ms) {
+                const secs = Math.floor(ms / 1000);
+                const mins = Math.floor(secs / 60);
+                if (mins > 0) return mins + "m " + (secs % 60) + "s";
+                return secs + "s";
+            }
+
+            function updateElapsed() {
+                const now = Date.now();
+                if (startedAt) {
+                    document.getElementById("stat-total-time").textContent =
+                        formatElapsed(now - startedAt.getTime());
+                }
+                if (iterationStartedAt) {
+                    document.getElementById("stat-iter-time").textContent =
+                        formatElapsed(now - iterationStartedAt.getTime());
+                }
+            }
+
+            function updateQueue(queue) {
+                const container = document.getElementById("queue-list");
+                if (!queue.length) {
+                    container.innerHTML =
+                        '<div style="color:#484f58;font-size:11px;font-style:italic;">No planned tasks</div>';
+                    return;
+                }
+                // Preserve which items are expanded
+                const expanded = new Set();
+                container
+                    .querySelectorAll(".queue-item.expanded")
+                    .forEach((el) => {
+                        expanded.add(el.dataset.id);
+                    });
+                container.innerHTML = "";
+                queue.forEach((item, i) => {
+                    const el = document.createElement("div");
+                    el.className =
+                        "queue-item" +
+                        (expanded.has(item.id) ? " expanded" : "");
+                    el.dataset.id = item.id;
+                    const complexityClass = (
+                        item.complexity || ""
+                    ).toLowerCase();
+                    const badge = complexityClass
+                        ? `<span class="complexity-badge complexity-${escapeHtml(complexityClass)}">${escapeHtml(item.complexity)}</span>`
+                        : "";
+                    el.innerHTML =
+                        `<div class="queue-item-header">` +
+                        `<span class="queue-item-num">${i + 1}.</span>` +
+                        `<span class="queue-item-id">${escapeHtml(item.id)}</span>` +
+                        `<span class="queue-item-name">${escapeHtml(item.name)}</span>` +
+                        `</div>` +
+                        `<div class="queue-item-details">` +
+                        `<div class="queue-detail-row"><span class="queue-detail-label">Complexity</span><span class="queue-detail-value">${badge || "—"}</span></div>` +
+                        (item.description
+                            ? `<div class="queue-detail-row"><span class="queue-detail-label">Description</span><span class="queue-detail-value">${escapeHtml(item.description)}</span></div>`
+                            : "") +
+                        `<div class="queue-detail-row"><span class="queue-detail-label">Step</span><span class="queue-detail-value">${escapeHtml(item.progressionStep || "—")}</span></div>` +
+                        `<div class="queue-detail-row"><span class="queue-detail-label">Systems</span><span class="queue-detail-value">${escapeHtml(item.systems || "—")}</span></div>` +
+                        `</div>`;
+                    el.querySelector(".queue-item-header").addEventListener(
+                        "click",
+                        () => {
+                            el.classList.toggle("expanded");
+                        },
+                    );
+                    container.appendChild(el);
+                });
+            }
+
+            function updateStepProgress(mode, current) {
+                const steps = STEPS[mode] || [];
+                const container = document.getElementById("step-list");
+                container.innerHTML = "";
+
+                if (steps.length === 0) return;
+
+                let foundCurrent = false;
+                for (const step of steps) {
+                    const isCurrent = step === current;
+                    if (isCurrent) foundCurrent = true;
+
+                    const el = document.createElement("div");
+                    if (isCurrent) {
+                        el.className = "step-item step-current";
+                    } else if (!foundCurrent && current) {
+                        el.className = "step-item step-done";
+                    } else {
+                        el.className = "step-item";
+                    }
+                    el.textContent = step;
+                    container.appendChild(el);
+                }
+            }
+
+            // ── Button Actions ─────────────────────────────
+            async function startLoop(resume = false) {
+                try {
+                    await fetch(`/api/start${resume ? "?resume=true" : ""}`, {
+                        method: "POST",
+                    });
+                } catch (err) {
+                    appendOutput("Failed to start: " + err.message, "error");
+                }
+            }
+
+            async function startCritic() {
+                try {
+                    await fetch("/api/critic", { method: "POST" });
+                } catch (err) {
+                    appendOutput(
+                        "Failed to start critic: " + err.message,
+                        "error",
+                    );
+                }
+            }
+
+            async function setCriticModel(model) {
+                try {
+                    await fetch("/api/critic-model", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ model }),
+                    });
+                } catch (err) {
+                    appendOutput(
+                        "Failed to set critic model: " + err.message,
+                        "error",
+                    );
+                }
+            }
+
+            async function setRefinementMode(enabled) {
+                try {
+                    await fetch("/api/refinement-mode", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ enabled }),
+                    });
+                } catch (err) {
+                    appendOutput(
+                        "Failed to set refinement mode: " + err.message,
+                        "error",
+                    );
+                }
+            }
+
+            async function stopAfterIteration() {
+                try {
+                    await fetch("/api/stop-after", { method: "POST" });
+                } catch (err) {
+                    appendOutput(
+                        "Failed to request graceful stop: " + err.message,
+                        "error",
+                    );
+                }
+            }
+
+            async function stopLoop() {
+                try {
+                    await fetch("/api/stop", { method: "POST" });
+                } catch (err) {
+                    appendOutput("Failed to stop: " + err.message, "error");
+                }
+            }
+
+            function toggleMoreMenu(e) {
+                e.stopPropagation();
+                document
+                    .getElementById("more-dropdown")
+                    .classList.toggle("open");
+            }
+            function closeMoreMenu() {
+                document
+                    .getElementById("more-dropdown")
+                    .classList.remove("open");
+            }
+            document.addEventListener("click", closeMoreMenu);
+
+            async function killStaleMcp() {
+                try {
+                    const res = await fetch("/api/kill-mcp", {
+                        method: "POST",
+                    });
+                    const data = await res.json();
+                    appendOutput(
+                        "Kill MCP: " + (data.message || "done"),
+                        "text",
+                    );
+                } catch (err) {
+                    appendOutput("Failed to kill MCP: " + err.message, "error");
+                }
+            }
+
+            // ── Helpers ──────────────────────────────────────
+            function formatTokens(n) {
+                if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+                if (n >= 1000) return (n / 1000).toFixed(0) + "k";
+                return String(n);
+            }
+
+            function formatDuration(ms) {
+                if (!ms) return "—";
+                const secs = Math.floor(ms / 1000);
+                const mins = Math.floor(secs / 60);
+                if (mins > 0) return mins + "m " + (secs % 60) + "s";
+                return secs + "s";
+            }
+
+            // ── Tab Switching ──────────────────────────────
+            function switchTab(name) {
+                document
+                    .querySelectorAll(".tab")
+                    .forEach((t) => t.classList.remove("active"));
+                document
+                    .querySelectorAll(".tab-content")
+                    .forEach((t) => t.classList.remove("active"));
+                document.getElementById("tab-" + name).classList.add("active");
+                // Activate the clicked tab button
+                const tabs = document.querySelectorAll(".tab");
+                tabs.forEach((t) => {
+                    if (
+                        t.textContent
+                            .toLowerCase()
+                            .includes(name === "output" ? "live" : name)
+                    ) {
+                        t.classList.add("active");
+                    }
+                });
+                if (name === "history") loadHistory();
+                if (name === "user") loadUserTodo();
+                if (name === "agents") {
+                    loadBugSelect();
+                    fetch("/api/parallel")
+                        .then((r) => r.json())
+                        .then(updateParallelState)
+                        .catch(() => {});
+                }
+            }
+
+            // ── History ─────────────────────────────────────
+            async function loadHistory() {
+                try {
+                    const res = await fetch("/api/history");
+                    const sessions = await res.json();
+                    const tbody = document.getElementById("history-body");
+                    tbody.innerHTML = "";
+                    if (sessions.length === 0) {
+                        tbody.innerHTML =
+                            '<tr><td colspan="7" style="color:#484f58;text-align:center;padding:24px">No sessions yet</td></tr>';
+                        return;
+                    }
+                    for (const s of sessions) {
+                        const tr = document.createElement("tr");
+                        const resultClass = s.isError
+                            ? "history-error"
+                            : "history-ok";
+                        tr.innerHTML = `
+        <td>${s.timestamp}</td>
+        <td>${s.iteration}</td>
+        <td>${formatDuration(s.durationMs)}</td>
+        <td>${s.numTurns}</td>
+        <td>${formatTokens(s.outputTokens)}</td>
+        <td>$${s.costUSD.toFixed(2)}</td>
+        <td class="history-result ${resultClass}" title="${s.result.replace(/"/g, "&quot;")}">${s.result}</td>
+      `;
+                        tbody.appendChild(tr);
+                    }
+                } catch (err) {
+                    console.error("Failed to load history:", err);
+                }
+            }
+
+            // ── User Tasks & Feedback ──────────────────────
+            async function loadUserTodo() {
+                try {
+                    const res = await fetch("/api/user-todo");
+                    const data = await res.json();
+
+                    // Render tasks grouped by category
+                    const container = document.getElementById("user-tasks");
+                    container.innerHTML = "";
+                    if (data.tasks.length === 0) {
+                        container.innerHTML =
+                            '<div class="user-tasks-empty">No user tasks</div>';
+                    } else {
+                        let lastCat = "";
+                        let taskIdx = 0;
+                        for (const task of data.tasks) {
+                            if (task.category !== lastCat) {
+                                lastCat = task.category;
+                                const catEl = document.createElement("div");
+                                catEl.className = "user-category";
+                                catEl.textContent = task.category;
+                                container.appendChild(catEl);
+                            }
+                            const idx = taskIdx++;
+                            const taskEl = document.createElement("div");
+                            taskEl.className = "user-task";
+                            taskEl.innerHTML =
+                                `<div class="user-task-check${task.done ? " done" : ""}" onclick="toggleTask(${idx})">${task.done ? "&#10003;" : ""}</div>` +
+                                `<span class="user-task-text${task.done ? " done" : ""}">${escapeHtml(task.text)}</span>`;
+                            container.appendChild(taskEl);
+                        }
+                    }
+
+                    // Render feedback messages
+                    renderMessages(data.messages || []);
+                } catch (err) {
+                    console.error("Failed to load user todo:", err);
+                }
+            }
+
+            function renderMessages(messages) {
+                const container = document.getElementById("feedback-messages");
+                container.innerHTML = "";
+                if (messages.length === 0) {
+                    container.innerHTML =
+                        '<div class="feedback-empty">No feedback yet</div>';
+                    return;
+                }
+                for (const msg of messages) {
+                    const el = document.createElement("div");
+                    el.className = "feedback-msg";
+                    el.dataset.id = msg.id;
+                    el.innerHTML =
+                        `<span class="feedback-msg-ts">${escapeHtml(msg.timestamp || "legacy")}</span>` +
+                        `<span class="feedback-msg-text">${escapeHtml(msg.text)}</span>` +
+                        `<span class="feedback-msg-actions">` +
+                        `<button class="feedback-msg-btn" onclick="editMessage(${msg.id}, this)">edit</button>` +
+                        `<button class="feedback-msg-btn delete" onclick="deleteMessage(${msg.id})">del</button>` +
+                        `</span>`;
+                    container.appendChild(el);
+                }
+            }
+
+            async function sendFeedback() {
+                const input = document.getElementById("feedback-input");
+                const text = input.value.trim();
+                if (!text) return;
+                input.disabled = true;
+                try {
+                    await fetch("/api/user-feedback", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ text }),
+                    });
+                    input.value = "";
+                    loadUserTodo();
+                } catch (err) {
+                    console.error("Failed to send feedback:", err);
+                }
+                input.disabled = false;
+                input.focus();
+            }
+
+            function editMessage(id, btn) {
+                const msgEl = btn.closest(".feedback-msg");
+                const textEl = msgEl.querySelector(".feedback-msg-text");
+                const actionsEl = msgEl.querySelector(".feedback-msg-actions");
+                const original = textEl.textContent;
+
+                // Replace text with input
+                const input = document.createElement("input");
+                input.className = "feedback-msg-edit";
+                input.value = original;
+                textEl.replaceWith(input);
+
+                // Replace actions with save/cancel
+                actionsEl.innerHTML =
+                    `<button class="feedback-msg-btn" onclick="saveEdit(${id}, this)">save</button>` +
+                    `<button class="feedback-msg-btn" onclick="loadUserTodo()">cancel</button>`;
+                actionsEl.style.opacity = "1";
+
+                input.focus();
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter")
+                        saveEdit(id, actionsEl.querySelector("button"));
+                    if (e.key === "Escape") loadUserTodo();
+                });
+            }
+
+            async function saveEdit(id, btn) {
+                const msgEl = btn.closest(".feedback-msg");
+                const input = msgEl.querySelector(".feedback-msg-edit");
+                const text = input.value.trim();
+                if (!text) return;
+                try {
+                    await fetch("/api/user-feedback", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id, text }),
+                    });
+                    loadUserTodo();
+                } catch (err) {
+                    console.error("Failed to update message:", err);
+                }
+            }
+
+            async function deleteMessage(id) {
+                try {
+                    await fetch("/api/user-feedback", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id }),
+                    });
+                    loadUserTodo();
+                } catch (err) {
+                    console.error("Failed to delete message:", err);
+                }
+            }
+
+            async function toggleTask(idx) {
+                try {
+                    await fetch("/api/user-task-toggle", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: idx }),
+                    });
+                    loadUserTodo();
+                } catch (err) {
+                    console.error("Failed to toggle task:", err);
+                }
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement("div");
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // ── Chat Q&A ──────────────────────────────────
+            let chatStreaming = false;
+
+            async function sendChat() {
+                const input = document.getElementById("chat-input");
+                const question = input.value.trim();
+                if (!question || chatStreaming) return;
+
+                const container = document.getElementById("chat-messages");
+                const empty = container.querySelector(".chat-empty");
+                if (empty) empty.remove();
+
+                // User bubble
+                const userMsg = document.createElement("div");
+                userMsg.className = "chat-msg user";
+                userMsg.textContent = question;
+                container.appendChild(userMsg);
+
+                // Assistant bubble (streaming placeholder)
+                const assistantMsg = document.createElement("div");
+                assistantMsg.className = "chat-msg assistant streaming";
+                assistantMsg.textContent = "Thinking...";
+                container.appendChild(assistantMsg);
+
+                container.scrollTop = container.scrollHeight;
+                input.value = "";
+                input.disabled = true;
+                document.getElementById("chat-send").disabled = true;
+                chatStreaming = true;
+
+                try {
+                    const res = await fetch("/api/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ question }),
+                    });
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullText = "";
+                    let bugId = null;
+
+                    assistantMsg.textContent = "";
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        const chunk = decoder.decode(value, { stream: true });
+                        for (const line of chunk.split("\n")) {
+                            if (!line.trim()) continue;
+                            try {
+                                const evt = JSON.parse(line);
+                                if (evt.type === "text") {
+                                    fullText += evt.data;
+                                    assistantMsg.textContent = fullText;
+                                } else if (evt.type === "bug") {
+                                    bugId = evt.bugId;
+                                } else if (evt.type === "error") {
+                                    fullText += "\n[Error: " + evt.data + "]";
+                                    assistantMsg.textContent = fullText;
+                                }
+                            } catch {}
+                        }
+                        container.scrollTop = container.scrollHeight;
+                    }
+
+                    assistantMsg.classList.remove("streaming");
+
+                    if (bugId) {
+                        const badge = document.createElement("div");
+                        badge.className = "bug-badge";
+                        badge.textContent = "Filed as " + bugId;
+                        assistantMsg.appendChild(badge);
+                    }
+                } catch (err) {
+                    assistantMsg.textContent = "Error: " + err.message;
+                    assistantMsg.classList.remove("streaming");
+                }
+
+                input.disabled = false;
+                document.getElementById("chat-send").disabled = false;
+                chatStreaming = false;
+                input.focus();
+                container.scrollTop = container.scrollHeight;
+            }
+
+            // ── Progression Sim ────────────────────────────
+            const SIM_COLORS = [
+                "#e06c75",
+                "#e5c07b",
+                "#98c379",
+                "#61afef",
+                "#c678dd",
+                "#56b6c2",
+                "#be5046",
+                "#d19a66",
+                "#7ec699",
+                "#82aaff",
+                "#c792ea",
+                "#89ddff",
+                "#f78c6c",
+                "#ffcb6b",
+                "#a6e22e",
+            ];
+
+            function formatSimTime(sec) {
+                if (sec < 60) return sec + "s";
+                const m = Math.floor(sec / 60);
+                const s = sec % 60;
+                if (m < 60) return m + "m" + (s ? " " + s + "s" : "");
+                const h = Math.floor(m / 60);
+                return h + "h " + (m % 60) + "m";
+            }
+
+            async function runSim() {
+                const btn = document.getElementById("btn-run-sim");
+                const status = document.getElementById("sim-status");
+                btn.disabled = true;
+                status.textContent = "Running simulation...";
+
+                try {
+                    const res = await fetch("/api/run-sim", { method: "POST" });
+                    const data = await res.json();
+                    if (data.error) {
+                        status.textContent = "Error: " + data.error;
+                        btn.disabled = false;
+                        return;
+                    }
+                    status.textContent = "Done";
+                    renderSim(data);
+                } catch (err) {
+                    status.textContent = "Failed: " + err.message;
+                }
+                btn.disabled = false;
+            }
+
+            function renderSim(data) {
+                const container = document.getElementById("sim-results");
+                container.innerHTML = "";
+                const maxSec = data.maxSeconds;
+                const tooltip = document.getElementById("sim-tooltip");
+
+                // Collect all milestone IDs in order (from first scenario that has them all)
+                const allMilestoneIds = [];
+                const milestoneNames = {};
+                for (const r of data.results) {
+                    for (const m of r.milestones) {
+                        if (!allMilestoneIds.includes(m.id)) {
+                            allMilestoneIds.push(m.id);
+                            milestoneNames[m.id] = m.name;
+                        }
+                    }
+                }
+
+                // Determine the visual max — use the latest milestone time across all strategies
+                // (capped at maxSec) so bars aren't mostly empty
+                let visualMax = 0;
+                for (const r of data.results) {
+                    for (const m of r.milestones) {
+                        if (m.reachedAtSec > visualMax)
+                            visualMax = m.reachedAtSec;
+                    }
+                }
+                visualMax = Math.min(maxSec, Math.ceil(visualMax * 1.1)); // 10% padding
+
+                // Render each strategy row
+                for (const result of data.results) {
+                    const row = document.createElement("div");
+                    row.className = "sim-row";
+
+                    const label = document.createElement("div");
+                    label.className = "sim-label";
+                    label.textContent = result.scenarioName;
+                    row.appendChild(label);
+
+                    const bar = document.createElement("div");
+                    bar.className = "sim-bar";
+
+                    // Build sorted milestone list for this scenario
+                    const sorted = [...result.milestones].sort(
+                        (a, b) => a.reachedAtSec - b.reachedAtSec,
+                    );
+
+                    let prevTime = 0;
+                    for (let i = 0; i < sorted.length; i++) {
+                        const m = sorted[i];
+                        const gap = m.reachedAtSec - prevTime;
+                        const pct = (gap / visualMax) * 100;
+                        const colorIdx =
+                            allMilestoneIds.indexOf(m.id) % SIM_COLORS.length;
+
+                        const seg = document.createElement("div");
+                        seg.className = "sim-segment";
+                        seg.style.width = pct + "%";
+                        seg.style.background = SIM_COLORS[colorIdx];
+
+                        // Label inside segment if wide enough
+                        if (pct > 5) {
+                            const lbl = document.createElement("span");
+                            lbl.className = "sim-segment-label";
+                            lbl.textContent = formatSimTime(m.reachedAtSec);
+                            seg.appendChild(lbl);
+                        }
+
+                        // Tooltip
+                        seg.addEventListener("mouseenter", (e) => {
+                            tooltip.style.display = "block";
+                            tooltip.innerHTML = `<b>${m.name}</b><br>Reached: ${formatSimTime(m.reachedAtSec)}<br>Gap: ${formatSimTime(gap)}`;
+                        });
+                        seg.addEventListener("mousemove", (e) => {
+                            tooltip.style.left = e.clientX + 12 + "px";
+                            tooltip.style.top = e.clientY - 10 + "px";
+                        });
+                        seg.addEventListener("mouseleave", () => {
+                            tooltip.style.display = "none";
+                        });
+
+                        bar.appendChild(seg);
+                        prevTime = m.reachedAtSec;
+                    }
+
+                    // Unreached portion
+                    if (result.unreached && result.unreached.length > 0) {
+                        const remaining = Math.max(0, visualMax - prevTime);
+                        if (remaining > 0) {
+                            const unreachedSeg = document.createElement("div");
+                            unreachedSeg.className = "sim-segment-unreached";
+                            unreachedSeg.style.flex = "none";
+                            unreachedSeg.style.width =
+                                (remaining / visualMax) * 100 + "%";
+                            unreachedSeg.addEventListener("mouseenter", (e) => {
+                                tooltip.style.display = "block";
+                                const names = Array.isArray(result.unreached)
+                                    ? result.unreached.join(", ")
+                                    : Object.values(result.unreached).join(
+                                          ", ",
+                                      );
+                                tooltip.innerHTML = `<b>Unreached</b><br>${names || "none"}`;
+                            });
+                            unreachedSeg.addEventListener("mousemove", (e) => {
+                                tooltip.style.left = e.clientX + 12 + "px";
+                                tooltip.style.top = e.clientY - 10 + "px";
+                            });
+                            unreachedSeg.addEventListener("mouseleave", () => {
+                                tooltip.style.display = "none";
+                            });
+                            bar.appendChild(unreachedSeg);
+                        }
+                    }
+
+                    row.appendChild(bar);
+                    container.appendChild(row);
+                }
+
+                // Time axis
+                const axisRow = document.createElement("div");
+                axisRow.className = "sim-row";
+                const axisLabel = document.createElement("div");
+                axisLabel.className = "sim-time-label";
+                axisRow.appendChild(axisLabel);
+                const axis = document.createElement("div");
+                axis.className = "sim-time-axis";
+                const ticks = 6;
+                for (let i = 0; i <= ticks; i++) {
+                    const t = document.createElement("span");
+                    t.textContent = formatSimTime(
+                        Math.round((visualMax / ticks) * i),
+                    );
+                    axis.appendChild(t);
+                }
+                axisRow.appendChild(axis);
+                container.appendChild(axisRow);
+
+                // Legend
+                const legend = document.createElement("div");
+                legend.className = "sim-legend";
+                for (let i = 0; i < allMilestoneIds.length; i++) {
+                    const item = document.createElement("div");
+                    item.className = "sim-legend-item";
+                    const swatch = document.createElement("div");
+                    swatch.className = "sim-legend-swatch";
+                    swatch.style.background = SIM_COLORS[i % SIM_COLORS.length];
+                    item.appendChild(swatch);
+                    const name = document.createElement("span");
+                    name.textContent = milestoneNames[allMilestoneIds[i]];
+                    item.appendChild(name);
+                    legend.appendChild(item);
+                }
+                container.appendChild(legend);
+            }
+
+            // ── Parallel Agents ────────────────────────────
+            let parallelData = {
+                phase: "idle",
+                agents: [],
+                testResult: null,
+                testOutputCount: 0,
+            };
+            let selectedAgentId = null;
+            let agentOutputCache = {};
+
+            function loadBugSelect() {
+                fetch("/api/state")
+                    .then((r) => r.json())
+                    .then((data) => {
+                        const sel =
+                            document.getElementById("agents-bug-select");
+                        sel.innerHTML = "";
+                        const queue = data.plannedQueue || [];
+                        if (queue.length === 0) {
+                            const opt = document.createElement("option");
+                            opt.disabled = true;
+                            opt.textContent = "No planned bugs";
+                            sel.appendChild(opt);
+                            return;
+                        }
+                        for (const item of queue) {
+                            const opt = document.createElement("option");
+                            opt.value = item.id;
+                            opt.textContent = item.id + " — " + item.name;
+                            // Auto-select BUG items
+                            if (item.id.startsWith("BUG-")) opt.selected = true;
+                            sel.appendChild(opt);
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            async function startParallel() {
+                const sel = document.getElementById("agents-bug-select");
+                const bugIds = Array.from(sel.selectedOptions).map(
+                    (o) => o.value,
+                );
+                if (bugIds.length === 0) return;
+
+                try {
+                    const res = await fetch("/api/parallel/start", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ bugIds }),
+                    });
+                    const data = await res.json();
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    agentOutputCache = {};
+                    selectedAgentId = null;
+                } catch (err) {
+                    alert("Failed: " + err.message);
+                }
+            }
+
+            async function stopParallel() {
+                try {
+                    await fetch("/api/parallel/stop", { method: "POST" });
+                } catch {}
+            }
+
+            async function resetParallel() {
+                try {
+                    await fetch("/api/parallel/reset", { method: "POST" });
+                    agentOutputCache = {};
+                    selectedAgentId = null;
+                    renderAgentsPanel();
+                } catch {}
+            }
+
+            function updateParallelState(data) {
+                parallelData = data;
+                renderAgentsPanel();
+            }
+
+            function renderAgentsPanel() {
+                // Phase badge
+                const phaseBadge = document.getElementById("agents-phase");
+                phaseBadge.textContent = parallelData.phase.toUpperCase();
+                phaseBadge.className =
+                    "agents-phase agents-phase-" + parallelData.phase;
+
+                // Buttons
+                const isActive =
+                    parallelData.phase !== "idle" &&
+                    parallelData.phase !== "done";
+                document.getElementById("btn-agents-start").disabled = isActive;
+                document.getElementById("btn-agents-stop").disabled = !isActive;
+
+                // Agent list
+                const list = document.getElementById("agents-list");
+                if (
+                    parallelData.agents.length === 0 &&
+                    parallelData.phase === "idle"
+                ) {
+                    list.innerHTML =
+                        '<div style="color:#484f58;font-size:12px;font-style:italic;padding:12px 0;text-align:center;">Select bugs from the dropdown, then click "Start Parallel Fix" to spawn agents.</div>';
+                    return;
+                }
+
+                list.innerHTML = "";
+                for (const agent of parallelData.agents) {
+                    const card = document.createElement("div");
+                    card.className =
+                        "agent-card" +
+                        (selectedAgentId === agent.id ? " selected" : "");
+                    card.onclick = () => selectAgent(agent.id);
+
+                    const elapsed = agent.finishedAt
+                        ? formatDuration(
+                              new Date(agent.finishedAt) -
+                                  new Date(agent.startedAt),
+                          )
+                        : formatDuration(
+                              Date.now() - new Date(agent.startedAt),
+                          );
+
+                    card.innerHTML = `
+      <div class="agent-card-header">
+        <span class="agent-card-id">${escapeHtml(agent.bugId)}</span>
+        <span class="agent-card-status agent-status-${agent.status}">${agent.status}</span>
+      </div>
+      <div class="agent-card-name">${escapeHtml(agent.bugName)}</div>
+      <div class="agent-card-meta">${elapsed} | ${agent.outputCount} events${agent.error ? " | " + escapeHtml(agent.error) : ""}</div>
+    `;
+                    list.appendChild(card);
+                }
+
+                // Add test agent card if in testing phase or done
+                if (
+                    parallelData.phase === "testing" ||
+                    parallelData.phase === "done"
+                ) {
+                    const testCard = document.createElement("div");
+                    testCard.className =
+                        "agent-card-test" +
+                        (selectedAgentId === "test" ? " selected" : "");
+                    testCard.onclick = () => selectAgent("test");
+                    testCard.innerHTML = `
+      <div class="agent-card-header">
+        <span class="agent-card-id" style="color:#58a6ff;">TEST AGENT</span>
+        <span class="agent-card-status ${parallelData.testResult ? "agent-status-done" : "agent-status-coding"}">
+          ${parallelData.testResult ? "done" : "running"}
+        </span>
+      </div>
+      <div class="agent-card-name">Testing merged changes</div>
+      <div class="agent-card-meta">${parallelData.testOutputCount} events</div>
+    `;
+                    list.appendChild(testCard);
+                }
+            }
+
+            async function selectAgent(agentId) {
+                selectedAgentId = agentId;
+                renderAgentsPanel();
+                await loadAgentOutput(agentId);
+            }
+
+            async function loadAgentOutput(agentId) {
+                const container = document.getElementById("agent-output");
+                container.innerHTML =
+                    '<div class="agent-output-empty">Loading...</div>';
+
+                try {
+                    const url =
+                        agentId === "test"
+                            ? "/api/parallel/agent-output?id=test"
+                            : "/api/parallel/agent-output?id=" +
+                              encodeURIComponent(agentId);
+                    const res = await fetch(url);
+                    const output = await res.json();
+                    agentOutputCache[agentId] = output;
+                    renderAgentOutput(output);
+                } catch (err) {
+                    container.innerHTML =
+                        '<div class="agent-output-empty">Failed to load output</div>';
+                }
+            }
+
+            function renderAgentOutput(output) {
+                const container = document.getElementById("agent-output");
+                if (!output || output.length === 0) {
+                    container.innerHTML =
+                        '<div class="agent-output-empty">No output yet</div>';
+                    return;
+                }
+
+                container.innerHTML = "";
+                for (const entry of output) {
+                    const div = document.createElement("div");
+                    div.className = "entry";
+                    if (entry.event === "tool") {
+                        div.className += " entry-tool";
+                    } else if (
+                        typeof entry.data === "string" &&
+                        entry.data.includes("BLOXGEN:")
+                    ) {
+                        div.className += " entry-signal";
+                    } else {
+                        div.className += " entry-text";
+                    }
+                    div.textContent =
+                        typeof entry.data === "string"
+                            ? entry.data
+                            : JSON.stringify(entry.data);
+                    container.appendChild(div);
+                }
+                container.scrollTop = container.scrollHeight;
+            }
+
+            function appendAgentOutput(agentId, entry) {
+                if (!agentOutputCache[agentId]) agentOutputCache[agentId] = [];
+                agentOutputCache[agentId].push(entry);
+
+                if (selectedAgentId === agentId) {
+                    const container = document.getElementById("agent-output");
+                    // Remove empty state if present
+                    const empty = container.querySelector(
+                        ".agent-output-empty",
+                    );
+                    if (empty) empty.remove();
+
+                    const div = document.createElement("div");
+                    div.className = "entry";
+                    if (entry.event === "tool") {
+                        div.className += " entry-tool";
+                    } else if (
+                        typeof entry.data === "string" &&
+                        entry.data.includes("BLOXGEN:")
+                    ) {
+                        div.className += " entry-signal";
+                    } else {
+                        div.className += " entry-text";
+                    }
+                    div.textContent =
+                        typeof entry.data === "string"
+                            ? entry.data
+                            : JSON.stringify(entry.data);
+                    container.appendChild(div);
+
+                    const isAtBottom =
+                        container.scrollHeight -
+                            container.scrollTop -
+                            container.clientHeight <
+                        60;
+                    if (isAtBottom)
+                        container.scrollTop = container.scrollHeight;
+                }
+            }
+
+            // ── Init ───────────────────────────────────────
+            connectSSE();
+
+            // Fetch initial state
+            fetch("/api/state")
+                .then((r) => r.json())
+                .then(updateUI)
+                .catch(() => {});
+
+            // Load agents tab data
+            loadBugSelect();
+            fetch("/api/parallel")
+                .then((r) => r.json())
+                .then(updateParallelState)
+                .catch(() => {});
+        </script>
+    </body>
+</html>

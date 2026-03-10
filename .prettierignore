@@ -1,0 +1,4 @@
+Build/
+node_modules/
+Submodules/
+*.lock

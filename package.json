@@ -1,0 +1,19 @@
+{
+    "name": "bloxgen-cli",
+    "version": "0.0.0",
+    "description": "CLI tool for Bloxgen game development framework.",
+    "type": "module",
+    "scripts": {
+        "build": "bun build Source/Cli.ts --compile --outfile Build/bloxgen",
+        "build:all": "bun run Scripts/BuildAll.ts",
+        "dev": "bun run Source/Cli.ts",
+        "format": "prettier --write '**/*.{ts,json,yml,yaml,md}'",
+        "format:check": "prettier --check '**/*.{ts,json,yml,yaml,md}'",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "prettier": "^3.0.0",
+        "typescript": "^5.9.3"
+    }
+}
