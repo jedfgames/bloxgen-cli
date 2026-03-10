@@ -4,14 +4,6 @@
 .local
 .vscode
 *.bak
-*.gen.*
-*.lock
-*.rbxl
-*.rbxlx
-*.rbxm
-*.rbxmx
-Build
-DevPackages
-Packages
+Build/
+node_modules/
 sourcemap.json
-Tools

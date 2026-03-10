@@ -1,3 +1,0 @@
-local BloxgenCli = {}
-
-return BloxgenCli
