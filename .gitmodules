@@ -1,0 +1,9 @@
+[submodule "Submodules/claude-md-luau"]
+	path = Submodules/claude-md-luau
+	url = https://github.com/horsenuggets/claude-md-luau.git
+[submodule "Submodules/luau-cicd"]
+	path = Submodules/luau-cicd
+	url = https://github.com/horsenuggets/luau-cicd.git
+[submodule "Submodules/claude-md"]
+	path = Submodules/claude-md
+	url = https://github.com/horsenuggets/claude-md.git

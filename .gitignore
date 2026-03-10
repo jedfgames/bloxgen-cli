@@ -1,0 +1,17 @@
+.DS_Store
+.claude
+.env
+.local
+.vscode
+*.bak
+*.gen.*
+*.lock
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+Build
+DevPackages
+Packages
+sourcemap.json
+Tools

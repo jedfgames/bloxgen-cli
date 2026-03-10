@@ -1,0 +1,65 @@
+name: Publish release
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  publish:
+    name: Publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Rokit
+        uses: CompeyDev/setup-rokit@v0.1.2
+
+      - name: Get version and changelog
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+
+          # Extract changelog for this version
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            /^## / {
+              if (found) exit
+              if ($2 == ver) found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | sed '/^$/N;/^\n$/d')
+
+          # Write to file for multi-line support
+          echo "$CHANGELOG" > /tmp/changelog.txt
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Publish to Wally
+        env:
+          WALLY_AUTH: ${{ secrets.WALLY_AUTH }}
+        run: |
+          mkdir -p ~/.wally
+          echo "$WALLY_AUTH" > ~/.wally/auth.toml
+          wally publish
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create ${{ steps.version.outputs.tag }} \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file /tmp/changelog.txt

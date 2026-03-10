@@ -1,0 +1,6 @@
+{
+    "name": "bloxgen-cli",
+    "tree": {
+        "$path": "Source/BloxgenCli"
+    }
+}
