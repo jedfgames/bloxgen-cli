@@ -31,7 +31,12 @@ function main() {
     const args = process.argv.slice(2);
     const command = args[0];
 
-    if (!command || command === "help" || command === "--help" || command === "-h") {
+    if (
+        !command ||
+        command === "help" ||
+        command === "--help" ||
+        command === "-h"
+    ) {
         console.log(HELP_TEXT);
         process.exit(0);
     }
@@ -55,7 +60,9 @@ function main() {
         return;
     }
 
-    console.error(`Unknown command "${command}". Run "bloxgen help" for usage.`);
+    console.error(
+        `Unknown command "${command}". Run "bloxgen help" for usage.`,
+    );
     process.exit(1);
 }
 
