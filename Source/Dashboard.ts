@@ -13,7 +13,11 @@ import DASHBOARD_HTML from "./Dashboard.html" with { type: "text" };
 // ── Paths (derived from cwd, not script location) ────────────────
 const PROJECT_ROOT = process.cwd();
 const LOG_DIR = path.join(PROJECT_ROOT, ".claude", "bloxgen-logs");
-const CHECKPOINT_FILE = path.join(PROJECT_ROOT, ".claude", "bloxgen-checkpoint.json");
+const CHECKPOINT_FILE = path.join(
+    PROJECT_ROOT,
+    ".claude",
+    "bloxgen-checkpoint.json",
+);
 const STATUS_FILE = path.join(PROJECT_ROOT, ".claude", "bloxgen-status.txt");
 const STOP_FILE = path.join(PROJECT_ROOT, ".claude", "bloxgen-stop");
 const TODO_FILE = path.join(PROJECT_ROOT, "knowledge", "TODO.md");
@@ -33,7 +37,13 @@ const MONTHLY_CAP_USD = 200;
 const API_TO_PLAN_RATIO = 20;
 
 const ALLOWED_TOOLS = [
-    "Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash",
+    "Agent",
     "mcp__roblox-custom__run_lune_tests",
     "mcp__roblox-custom__run_studio_tests",
     "mcp__roblox-custom__run_regression",
@@ -110,12 +120,12 @@ let sessionCostUSD = 0;
 
 // ── Parallel Agents ───────────────────────────────────────────────
 interface ParallelAgent {
-    id: string;          // e.g. "agent-0"
-    bugId: string;       // e.g. "BUG-023"
-    bugName: string;     // short description
-    model: string;       // e.g. "haiku" or "sonnet"
+    id: string; // e.g. "agent-0"
+    bugId: string; // e.g. "BUG-023"
+    bugName: string; // short description
+    model: string; // e.g. "haiku" or "sonnet"
     status: "coding" | "done" | "failed";
-    branch: string;      // worktree branch name
+    branch: string; // worktree branch name
     worktreePath: string;
     process: ChildProcess | null;
     output: { event: string; data: unknown }[];
@@ -141,7 +151,13 @@ const parallelState: ParallelState = {
 };
 
 const PARALLEL_ALLOWED_TOOLS = [
-    "Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Bash",
+    "Agent",
 ].join(",");
 
 const PARALLEL_FIX_PROMPT = `You are fixing a specific bug in a Roblox incremental simulator project.
@@ -165,7 +181,7 @@ If stuck after 3 attempts, output: BLOXGEN: STUCK — <reason>`;
 function getParallelPublicState() {
     return {
         phase: parallelState.phase,
-        agents: parallelState.agents.map(a => ({
+        agents: parallelState.agents.map((a) => ({
             id: a.id,
             bugId: a.bugId,
             bugName: a.bugName,
@@ -196,24 +212,36 @@ async function spawnParallelAgents(bugs: { id: string; model: string }[]) {
 
     // Read TODO.md once to get bug descriptions
     let todoContent = "";
-    try { todoContent = fs.readFileSync(TODO_FILE, "utf-8"); } catch { }
+    try {
+        todoContent = fs.readFileSync(TODO_FILE, "utf-8");
+    } catch {}
 
     for (let i = 0; i < bugs.length; i++) {
         const bugId = bugs[i].id;
         const bugModel = bugs[i].model;
         const branch = `parallel-fix/${bugId.toLowerCase()}-${Date.now()}`;
-        const worktreePath = path.join(PROJECT_ROOT, ".claude", "worktrees", `agent-${i}`);
+        const worktreePath = path.join(
+            PROJECT_ROOT,
+            ".claude",
+            "worktrees",
+            `agent-${i}`,
+        );
 
         // Extract bug name from TODO.md
         let bugName = bugId;
         for (const line of todoContent.split("\n")) {
-            if (line.includes(bugId) && (line.includes("| planned") || line.includes("- ["))) {
+            if (
+                line.includes(bugId) &&
+                (line.includes("| planned") || line.includes("- ["))
+            ) {
                 const cols = line.split("|");
                 if (cols.length >= 4) {
                     bugName = cols[3]?.trim().split(" — ")[0] || bugId;
                 } else {
                     // Active issues format: - [ ] **BUG-XXX**: description
-                    const descMatch = line.match(/\*\*[^*]+\*\*:\s*(.+?)(?:\s*—|$)/);
+                    const descMatch = line.match(
+                        /\*\*[^*]+\*\*:\s*(.+?)(?:\s*—|$)/,
+                    );
                     if (descMatch) bugName = descMatch[1].trim();
                 }
                 break;
@@ -249,14 +277,17 @@ async function spawnParallelAgents(bugs: { id: string; model: string }[]) {
     await Promise.all(agentPromises);
 
     // Check if all succeeded
-    const allDone = parallelState.agents.every(a => a.status === "done");
-    const anyDone = parallelState.agents.some(a => a.status === "done");
+    const allDone = parallelState.agents.every((a) => a.status === "done");
+    const anyDone = parallelState.agents.some((a) => a.status === "done");
 
     if (!anyDone) {
         parallelState.phase = "done";
         parallelState.testResult = "All agents failed — no merge needed";
         broadcastParallel();
-        broadcast("signal", "PARALLEL: All agents failed. No changes to merge.");
+        broadcast(
+            "signal",
+            "PARALLEL: All agents failed. No changes to merge.",
+        );
         return;
     }
 
@@ -278,9 +309,17 @@ async function spawnParallelAgents(bugs: { id: string; model: string }[]) {
             broadcast("text", `Merged ${agent.branch} (${agent.bugId})`);
         } catch (err: any) {
             mergeErrors++;
-            broadcast("signal", `MERGE CONFLICT: ${agent.bugId} — ${err.message}`);
+            broadcast(
+                "signal",
+                `MERGE CONFLICT: ${agent.bugId} — ${err.message}`,
+            );
             // Abort the failed merge
-            try { execSync("git merge --abort", { cwd: PROJECT_ROOT, timeout: 5000 }); } catch { }
+            try {
+                execSync("git merge --abort", {
+                    cwd: PROJECT_ROOT,
+                    timeout: 5000,
+                });
+            } catch {}
         }
     }
 
@@ -291,17 +330,20 @@ async function spawnParallelAgents(bugs: { id: string; model: string }[]) {
                 cwd: PROJECT_ROOT,
                 timeout: 10000,
             });
-        } catch { }
+        } catch {}
         try {
             execSync(`git branch -D ${agent.branch}`, {
                 cwd: PROJECT_ROOT,
                 timeout: 5000,
             });
-        } catch { }
+        } catch {}
     }
 
     if (mergeErrors > 0) {
-        broadcast("signal", `PARALLEL: ${mergeErrors} merge conflict(s). Resolve manually.`);
+        broadcast(
+            "signal",
+            `PARALLEL: ${mergeErrors} merge conflict(s). Resolve manually.`,
+        );
     }
 
     // Testing phase
@@ -313,11 +355,14 @@ async function spawnParallelAgents(bugs: { id: string; model: string }[]) {
 
     // Mark successfully fixed bugs as implemented in TODO.md
     const fixedBugIds = parallelState.agents
-        .filter(a => a.status === "done")
-        .map(a => a.bugId);
+        .filter((a) => a.status === "done")
+        .map((a) => a.bugId);
     if (fixedBugIds.length > 0) {
         markBugsImplemented(fixedBugIds);
-        broadcast("text", `Marked ${fixedBugIds.length} bug(s) as implemented: ${fixedBugIds.join(", ")}`);
+        broadcast(
+            "text",
+            `Marked ${fixedBugIds.length} bug(s) as implemented: ${fixedBugIds.join(", ")}`,
+        );
     }
 
     parallelState.phase = "done";
@@ -332,11 +377,14 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
             fs.mkdirSync(path.dirname(agent.worktreePath), { recursive: true });
 
             // Create git worktree with new branch
-            execSync(`git worktree add -b ${agent.branch} "${agent.worktreePath}" HEAD`, {
-                cwd: PROJECT_ROOT,
-                encoding: "utf-8",
-                timeout: 30000,
-            });
+            execSync(
+                `git worktree add -b ${agent.branch} "${agent.worktreePath}" HEAD`,
+                {
+                    cwd: PROJECT_ROOT,
+                    encoding: "utf-8",
+                    timeout: 30000,
+                },
+            );
         } catch (err: any) {
             agent.status = "failed";
             agent.error = `Worktree creation failed: ${err.message}`;
@@ -356,9 +404,7 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
             "tests/lune/sim",
             "ServerPackages",
         ];
-        const untrackedFiles = [
-            "src/shared/Progression/StepValidator.luau",
-        ];
+        const untrackedFiles = ["src/shared/Progression/StepValidator.luau"];
         for (const dir of untrackedDirs) {
             const src = path.join(PROJECT_ROOT, dir);
             const dest = path.join(agent.worktreePath, dir);
@@ -377,19 +423,28 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
 
         const prompt = `${PARALLEL_FIX_PROMPT}\n\n## Your assigned bug: ${agent.bugId}\nFix ONLY this bug. Read TODO.md to find its description.`;
 
-        const claude = spawn("claude", [
-            "-p", prompt,
-            "--allowedTools", PARALLEL_ALLOWED_TOOLS,
-            "--model", agent.model,
-            "--mcp-config", path.join(PROJECT_ROOT, ".claude", "mcp-none.json"),
-            "--strict-mcp-config",
-            "--verbose",
-            "--output-format", "stream-json",
-        ], {
-            cwd: agent.worktreePath,
-            env: process.env,
-            stdio: ["ignore", "pipe", "pipe"],
-        });
+        const claude = spawn(
+            "claude",
+            [
+                "-p",
+                prompt,
+                "--allowedTools",
+                PARALLEL_ALLOWED_TOOLS,
+                "--model",
+                agent.model,
+                "--mcp-config",
+                path.join(PROJECT_ROOT, ".claude", "mcp-none.json"),
+                "--strict-mcp-config",
+                "--verbose",
+                "--output-format",
+                "stream-json",
+            ],
+            {
+                cwd: agent.worktreePath,
+                env: process.env,
+                stdio: ["ignore", "pipe", "pipe"],
+            },
+        );
 
         agent.process = claude;
         broadcastParallel();
@@ -400,7 +455,11 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
             if (!trimmed) return;
 
             let obj: any;
-            try { obj = JSON.parse(trimmed); } catch { return; }
+            try {
+                obj = JSON.parse(trimmed);
+            } catch {
+                return;
+            }
 
             if (obj.type !== "assistant") return;
             const content = obj.message?.content;
@@ -409,7 +468,11 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
             for (const c of content) {
                 if (c.type === "text" && c.text?.trim()) {
                     agent.output.push({ event: "text", data: c.text });
-                    broadcast("parallel-agent", { agentId: agent.id, event: "text", data: c.text });
+                    broadcast("parallel-agent", {
+                        agentId: agent.id,
+                        event: "text",
+                        data: c.text,
+                    });
 
                     // Check for completion signals
                     if (c.text.includes("BLOXGEN: FIXED")) {
@@ -421,7 +484,11 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
                 } else if (c.type === "tool_use") {
                     const summary = summarizeTool(c.name ?? "", c.input ?? {});
                     agent.output.push({ event: "tool", data: summary });
-                    broadcast("parallel-agent", { agentId: agent.id, event: "tool", data: summary });
+                    broadcast("parallel-agent", {
+                        agentId: agent.id,
+                        event: "tool",
+                        data: summary,
+                    });
                 }
             }
         });
@@ -439,17 +506,24 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
 
             // Check if any FIXED signal was output
             const hasFixed = agent.output.some(
-                o => typeof o.data === "string" && o.data.includes("BLOXGEN: FIXED")
+                (o) =>
+                    typeof o.data === "string" &&
+                    o.data.includes("BLOXGEN: FIXED"),
             );
             const hasStuck = agent.output.some(
-                o => typeof o.data === "string" && o.data.includes("BLOXGEN: STUCK")
+                (o) =>
+                    typeof o.data === "string" &&
+                    o.data.includes("BLOXGEN: STUCK"),
             );
 
             if (hasFixed && !hasStuck) {
                 agent.status = "done";
             } else {
                 agent.status = "failed";
-                if (!agent.error) agent.error = hasStuck ? "Agent got stuck" : `Exited with code ${code}`;
+                if (!agent.error)
+                    agent.error = hasStuck
+                        ? "Agent got stuck"
+                        : `Exited with code ${code}`;
             }
 
             broadcastParallel();
@@ -475,8 +549,8 @@ async function spawnOneAgent(agent: ParallelAgent): Promise<void> {
 async function runTestAgent(): Promise<void> {
     return new Promise((resolve) => {
         const bugSummary = parallelState.agents
-            .filter(a => a.status === "done")
-            .map(a => `- ${a.bugId}: ${a.bugName}`)
+            .filter((a) => a.status === "done")
+            .map((a) => `- ${a.bugId}: ${a.bugName}`)
             .join("\n");
 
         const testPrompt = `You are the TEST AGENT for a parallel bugfix session.
@@ -497,18 +571,26 @@ ${bugSummary}
 When finished, output: BLOXGEN: TESTS_DONE — <pass_count>/<total_count> passed
 If stuck, output: BLOXGEN: TESTS_STUCK — <reason>`;
 
-        const claude = spawn("claude", [
-            "-p", testPrompt,
-            "--allowedTools", ALLOWED_TOOLS,
-            "--mcp-config", MCP_CONFIG,
-            "--strict-mcp-config",
-            "--verbose",
-            "--output-format", "stream-json",
-        ], {
-            cwd: PROJECT_ROOT,
-            env: process.env,
-            stdio: ["ignore", "pipe", "pipe"],
-        });
+        const claude = spawn(
+            "claude",
+            [
+                "-p",
+                testPrompt,
+                "--allowedTools",
+                ALLOWED_TOOLS,
+                "--mcp-config",
+                MCP_CONFIG,
+                "--strict-mcp-config",
+                "--verbose",
+                "--output-format",
+                "stream-json",
+            ],
+            {
+                cwd: PROJECT_ROOT,
+                env: process.env,
+                stdio: ["ignore", "pipe", "pipe"],
+            },
+        );
 
         parallelState.testAgent = claude;
         broadcastParallel();
@@ -519,7 +601,11 @@ If stuck, output: BLOXGEN: TESTS_STUCK — <reason>`;
             if (!trimmed) return;
 
             let obj: any;
-            try { obj = JSON.parse(trimmed); } catch { return; }
+            try {
+                obj = JSON.parse(trimmed);
+            } catch {
+                return;
+            }
 
             if (obj.type !== "assistant") return;
             const content = obj.message?.content;
@@ -527,16 +613,28 @@ If stuck, output: BLOXGEN: TESTS_STUCK — <reason>`;
 
             for (const c of content) {
                 if (c.type === "text" && c.text?.trim()) {
-                    parallelState.testOutput.push({ event: "text", data: c.text });
+                    parallelState.testOutput.push({
+                        event: "text",
+                        data: c.text,
+                    });
                     broadcast("parallel-test", { event: "text", data: c.text });
 
-                    if (c.text.includes("BLOXGEN: TESTS_DONE") || c.text.includes("BLOXGEN: TESTS_STUCK")) {
+                    if (
+                        c.text.includes("BLOXGEN: TESTS_DONE") ||
+                        c.text.includes("BLOXGEN: TESTS_STUCK")
+                    ) {
                         parallelState.testResult = c.text;
                     }
                 } else if (c.type === "tool_use") {
                     const summary = summarizeTool(c.name ?? "", c.input ?? {});
-                    parallelState.testOutput.push({ event: "tool", data: summary });
-                    broadcast("parallel-test", { event: "tool", data: summary });
+                    parallelState.testOutput.push({
+                        event: "tool",
+                        data: summary,
+                    });
+                    broadcast("parallel-test", {
+                        event: "tool",
+                        data: summary,
+                    });
                 }
             }
         });
@@ -544,7 +642,10 @@ If stuck, output: BLOXGEN: TESTS_STUCK — <reason>`;
         claude.stderr?.on("data", (chunk: Buffer) => {
             const text = chunk.toString().trim();
             if (text) {
-                parallelState.testOutput.push({ event: "text", data: `[stderr] ${text}` });
+                parallelState.testOutput.push({
+                    event: "text",
+                    data: `[stderr] ${text}`,
+                });
             }
         });
 
@@ -590,13 +691,13 @@ function stopParallelAgents() {
                 cwd: PROJECT_ROOT,
                 timeout: 10000,
             });
-        } catch { }
+        } catch {}
         try {
             execSync(`git branch -D ${agent.branch}`, {
                 cwd: PROJECT_ROOT,
                 timeout: 5000,
             });
-        } catch { }
+        } catch {}
     }
     parallelState.phase = "idle";
     broadcastParallel();
@@ -611,14 +712,23 @@ const outputBuffer: { event: string; data: unknown }[] = [];
 function broadcast(event: string, data: unknown) {
     const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
     // Buffer displayable events for replay on reconnect
-    if (event === "text" || event === "tool" || event === "step" || event === "signal") {
+    if (
+        event === "text" ||
+        event === "tool" ||
+        event === "step" ||
+        event === "signal"
+    ) {
         outputBuffer.push({ event, data });
         if (outputBuffer.length > MAX_OUTPUT_BUFFER) {
             outputBuffer.splice(0, outputBuffer.length - MAX_OUTPUT_BUFFER);
         }
     }
     for (const client of sseClients) {
-        try { client.write(payload); } catch { sseClients.delete(client); }
+        try {
+            client.write(payload);
+        } catch {
+            sseClients.delete(client);
+        }
     }
 }
 
@@ -631,14 +741,24 @@ function getMonthCostUSD(): number {
     const monthPrefix = `bloxgen_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
     let total = 0;
     try {
-        const files = fs.readdirSync(LOG_DIR).filter((f: string) => f.startsWith(monthPrefix) && f.endsWith(".log"));
+        const files = fs
+            .readdirSync(LOG_DIR)
+            .filter(
+                (f: string) => f.startsWith(monthPrefix) && f.endsWith(".log"),
+            );
         for (const file of files) {
             const fullPath = path.join(LOG_DIR, file);
             const stat = fs.statSync(fullPath);
             const readSize = Math.min(stat.size, 4096);
             const buf = Buffer.alloc(readSize);
             const fd = fs.openSync(fullPath, "r");
-            fs.readSync(fd, buf, 0, readSize, Math.max(0, stat.size - readSize));
+            fs.readSync(
+                fd,
+                buf,
+                0,
+                readSize,
+                Math.max(0, stat.size - readSize),
+            );
             fs.closeSync(fd);
             const tail = buf.toString("utf-8");
             const resultMatch = tail.match(/\{"type":"result".*$/m);
@@ -646,10 +766,10 @@ function getMonthCostUSD(): number {
                 try {
                     const result = JSON.parse(resultMatch[0]);
                     total += result.total_cost_usd ?? 0;
-                } catch { }
+                } catch {}
             }
         }
-    } catch { }
+    } catch {}
     return total;
 }
 
@@ -683,7 +803,9 @@ function countPlanned(): number {
     try {
         const content = fs.readFileSync(TODO_FILE, "utf-8");
         return (content.match(/\| planned/g) || []).length;
-    } catch { return 0; }
+    } catch {
+        return 0;
+    }
 }
 
 function listPlannedIds(): string[] {
@@ -697,19 +819,37 @@ function listPlannedIds(): string[] {
             }
         }
         return ids;
-    } catch { return []; }
+    } catch {
+        return [];
+    }
 }
 
-function getPlannedQueue(): { priority: number; id: string; name: string; description: string; complexity: string; systems: string; progressionStep: string }[] {
+function getPlannedQueue(): {
+    priority: number;
+    id: string;
+    name: string;
+    description: string;
+    complexity: string;
+    systems: string;
+    progressionStep: string;
+}[] {
     try {
         const content = fs.readFileSync(TODO_FILE, "utf-8");
-        const items: { priority: number; id: string; name: string; description: string; complexity: string; systems: string; progressionStep: string }[] = [];
+        const items: {
+            priority: number;
+            id: string;
+            name: string;
+            description: string;
+            complexity: string;
+            systems: string;
+            progressionStep: string;
+        }[] = [];
         const seenIds = new Set<string>();
 
         for (const line of content.split("\n")) {
             // Feature Queue table rows with "| planned"
             if (line.includes("| planned")) {
-                const cols = line.split("|").map(c => c.trim());
+                const cols = line.split("|").map((c) => c.trim());
                 if (cols.length < 6) continue;
                 const priority = parseInt(cols[1], 10);
                 const id = cols[2];
@@ -720,7 +860,15 @@ function getPlannedQueue(): { priority: number; id: string; name: string; descri
                 const progressionStep = cols[4] || "";
                 const complexity = cols[5] || "";
                 const systems = cols[6] || "";
-                items.push({ priority: isNaN(priority) ? 99 : priority, id, name, description, complexity, systems, progressionStep });
+                items.push({
+                    priority: isNaN(priority) ? 99 : priority,
+                    id,
+                    name,
+                    description,
+                    complexity,
+                    systems,
+                    progressionStep,
+                });
                 seenIds.add(id);
                 continue;
             }
@@ -734,32 +882,47 @@ function getPlannedQueue(): { priority: number; id: string; name: string; descri
                 const nameParts = rest.split(/\s[—–-]\s/);
                 const name = nameParts[0].substring(0, 80);
                 const description = rest;
-                const diffMatch = rest.match(/Difficulty:\s*\*{0,2}(\w+)\*{0,2}/i);
+                const diffMatch = rest.match(
+                    /Difficulty:\s*\*{0,2}(\w+)\*{0,2}/i,
+                );
                 const sysMatch = rest.match(/Systems:\s*([^—–\-\[]+)/i);
                 const complexity = diffMatch ? diffMatch[1] : "";
                 const systems = sysMatch ? sysMatch[1].trim() : "";
                 // Bugs from Active Issues appear after all Feature Queue items (agent picks Feature Queue first)
-                const maxFeaturePriority = items.reduce((max, it) => Math.max(max, it.priority), 0);
-                items.push({ priority: maxFeaturePriority + 1, id, name, description, complexity, systems, progressionStep: "" });
+                const maxFeaturePriority = items.reduce(
+                    (max, it) => Math.max(max, it.priority),
+                    0,
+                );
+                items.push({
+                    priority: maxFeaturePriority + 1,
+                    id,
+                    name,
+                    description,
+                    complexity,
+                    systems,
+                    progressionStep: "",
+                });
                 seenIds.add(id);
             }
         }
 
         items.sort((a, b) => a.priority - b.priority);
         return items;
-    } catch { return []; }
+    } catch {
+        return [];
+    }
 }
 
 function getParallelBugs(): { id: string; model: string }[] {
     return getPlannedQueue()
-        .filter(item => {
+        .filter((item) => {
             if (!item.id.startsWith("BUG-")) return false;
             const c = item.complexity.toLowerCase();
             return ["easy", "haiku", "medium", "sonnet"].includes(c);
         })
-        .map(item => {
+        .map((item) => {
             const c = item.complexity.toLowerCase();
-            const model = (c === "easy" || c === "haiku") ? "haiku" : "sonnet";
+            const model = c === "easy" || c === "haiku" ? "haiku" : "sonnet";
             return { id: item.id, model };
         });
 }
@@ -787,13 +950,16 @@ function markBugsImplemented(bugIds: string[]): void {
             // Mark Active Issues checkbox: - [ ] **BUG-XXX** → - [x] **BUG-XXX**
             content = content.replace(
                 new RegExp(`- \\[ \\] (\\*\\*${bugId}\\*\\*)`, "g"),
-                "- [x] $1"
+                "- [x] $1",
             );
             // Mark Feature Queue table row: | planned | → | implemented |
             // Match lines containing the bug ID and "planned"
             content = content.replace(
-                new RegExp(`(\\|[^|]*${bugId}[^|]*(?:\\|[^|]*)*\\|\\s*)planned(\\s*\\|)`, "g"),
-                "$1implemented$2"
+                new RegExp(
+                    `(\\|[^|]*${bugId}[^|]*(?:\\|[^|]*)*\\|\\s*)planned(\\s*\\|)`,
+                    "g",
+                ),
+                "$1implemented$2",
             );
         }
         fs.writeFileSync(TODO_FILE, content);
@@ -802,7 +968,12 @@ function markBugsImplemented(bugIds: string[]): void {
     }
 }
 
-function appendBugToTodo(bugId: string, description: string, severity: string, systems: string): void {
+function appendBugToTodo(
+    bugId: string,
+    description: string,
+    severity: string,
+    systems: string,
+): void {
     try {
         const content = fs.readFileSync(TODO_FILE, "utf-8");
         const lines = content.split("\n");
@@ -811,12 +982,14 @@ function appendBugToTodo(bugId: string, description: string, severity: string, s
         const activeEntry = `- [ ] **${bugId}**: ${description} — Severity: ${severity} — Systems: ${systems}`;
         const tableEntry = `| 0 | ${bugId} | ${description} | N/A | ${severity === "high" ? "medium" : "easy"} | ${systems} | planned |`;
 
-        let featureQueueIdx = lines.findIndex(l => l.startsWith("## Feature Queue"));
+        let featureQueueIdx = lines.findIndex((l) =>
+            l.startsWith("## Feature Queue"),
+        );
         if (featureQueueIdx === -1) featureQueueIdx = lines.length;
         lines.splice(featureQueueIdx, 0, activeEntry, "");
 
         // Insert table row before "## Backlog"
-        const backlogIdx = lines.findIndex(l => l.startsWith("## Backlog"));
+        const backlogIdx = lines.findIndex((l) => l.startsWith("## Backlog"));
         if (backlogIdx !== -1) {
             lines.splice(backlogIdx, 0, tableEntry);
         }
@@ -827,7 +1000,11 @@ function appendBugToTodo(bugId: string, description: string, severity: string, s
     }
 }
 
-function getFirstPlannedFeature(): { id: string; name: string; difficulty: string } {
+function getFirstPlannedFeature(): {
+    id: string;
+    name: string;
+    difficulty: string;
+} {
     try {
         const content = fs.readFileSync(TODO_FILE, "utf-8");
         for (const line of content.split("\n")) {
@@ -835,15 +1012,23 @@ function getFirstPlannedFeature(): { id: string; name: string; difficulty: strin
                 const cols = line.split("|");
                 const rawDifficulty = (cols[5]?.trim() || "").toLowerCase();
                 // Map legacy names and normalize to haiku/sonnet/opus
-                const rawModel = rawDifficulty === "easy" ? "haiku"
-                    : rawDifficulty === "medium" ? "sonnet"
-                        : rawDifficulty === "hard" ? "opus"
-                            : ["haiku", "sonnet", "opus"].includes(rawDifficulty) ? rawDifficulty
-                                : "sonnet"; // default to sonnet if unrecognized
+                const rawModel =
+                    rawDifficulty === "easy"
+                        ? "haiku"
+                        : rawDifficulty === "medium"
+                          ? "sonnet"
+                          : rawDifficulty === "hard"
+                            ? "opus"
+                            : ["haiku", "sonnet", "opus"].includes(
+                                    rawDifficulty,
+                                )
+                              ? rawDifficulty
+                              : "sonnet"; // default to sonnet if unrecognized
                 // Features should never use anything lower than sonnet
                 const id = cols[2]?.trim() || "";
                 const isFeature = !id.startsWith("BUG-");
-                const difficulty = isFeature && rawModel === "haiku" ? "sonnet" : rawModel;
+                const difficulty =
+                    isFeature && rawModel === "haiku" ? "sonnet" : rawModel;
                 return {
                     id,
                     name: cols[3]?.trim() || "?",
@@ -851,7 +1036,7 @@ function getFirstPlannedFeature(): { id: string; name: string; difficulty: strin
                 };
             }
         }
-    } catch { }
+    } catch {}
     return { id: "", name: "", difficulty: "sonnet" };
 }
 
@@ -879,7 +1064,9 @@ function loadCheckpoint(): boolean {
         lastCheckpointStep = data.last_step || "";
         refinementMode = data.refinement_mode || false;
         return true;
-    } catch { return false; }
+    } catch {
+        return false;
+    }
 }
 
 function writeStatus(msg: string) {
@@ -896,25 +1083,40 @@ function formatTimestamp(): string {
 function killStaleMcp() {
     try {
         const result = execSync(
-            'wmic process where "commandline like \'%mcp-tools/server.ts%\'" get ProcessId 2>nul',
-            { encoding: "utf-8", timeout: 5000 }
+            "wmic process where \"commandline like '%mcp-tools/server.ts%'\" get ProcessId 2>nul",
+            { encoding: "utf-8", timeout: 5000 },
         );
         const pids = result.match(/\d+/g) || [];
         for (const pid of pids) {
-            try { execSync(`taskkill /F /PID ${pid}`, { timeout: 3000 }); } catch { }
+            try {
+                execSync(`taskkill /F /PID ${pid}`, { timeout: 3000 });
+            } catch {}
         }
-    } catch { }
+    } catch {}
 }
 
 function checkStudioMcp(timeoutSecs = 10): Promise<boolean> {
     return new Promise((resolve) => {
-        const mcpExe = path.join(PROJECT_ROOT, "mcp-tools", "rbx-studio-mcp.exe");
-        if (!fs.existsSync(mcpExe)) { resolve(false); return; }
+        const mcpExe = path.join(
+            PROJECT_ROOT,
+            "mcp-tools",
+            "rbx-studio-mcp.exe",
+        );
+        if (!fs.existsSync(mcpExe)) {
+            resolve(false);
+            return;
+        }
 
-        const proc = spawn(mcpExe, ["--stdio"], { stdio: ["pipe", "pipe", "pipe"] });
+        const proc = spawn(mcpExe, ["--stdio"], {
+            stdio: ["pipe", "pipe", "pipe"],
+        });
         let resolved = false;
         const timer = setTimeout(() => {
-            if (!resolved) { resolved = true; proc.kill(); resolve(false); }
+            if (!resolved) {
+                resolved = true;
+                proc.kill();
+                resolve(false);
+            }
         }, timeoutSecs * 1000);
 
         proc.stdout.on("data", (chunk: Buffer) => {
@@ -927,31 +1129,65 @@ function checkStudioMcp(timeoutSecs = 10): Promise<boolean> {
         });
 
         proc.on("error", () => {
-            if (!resolved) { resolved = true; clearTimeout(timer); resolve(false); }
+            if (!resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                resolve(false);
+            }
         });
 
-        proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "healthcheck", version: "0.1" } } }) + "\n");
-        proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
-        proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "get_studio_mode", arguments: {} } }) + "\n");
+        proc.stdin.write(
+            JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "initialize",
+                params: {
+                    protocolVersion: "2024-11-05",
+                    capabilities: {},
+                    clientInfo: { name: "healthcheck", version: "0.1" },
+                },
+            }) + "\n",
+        );
+        proc.stdin.write(
+            JSON.stringify({
+                jsonrpc: "2.0",
+                method: "notifications/initialized",
+            }) + "\n",
+        );
+        proc.stdin.write(
+            JSON.stringify({
+                jsonrpc: "2.0",
+                id: 2,
+                method: "tools/call",
+                params: { name: "get_studio_mode", arguments: {} },
+            }) + "\n",
+        );
     });
 }
 
 // ── Tool summarizer (from parse-bloxgen-log.ts) ──────────────────────
 function summarizeTool(name: string, input: Record<string, any>): string {
     switch (name) {
-        case "Read": return `[Read] ${input.file_path ?? ""}`;
-        case "Write": return `[Write] ${input.file_path ?? ""}`;
-        case "Edit": return `[Edit] ${input.file_path ?? ""}`;
+        case "Read":
+            return `[Read] ${input.file_path ?? ""}`;
+        case "Write":
+            return `[Write] ${input.file_path ?? ""}`;
+        case "Edit":
+            return `[Edit] ${input.file_path ?? ""}`;
         case "Grep":
-        case "Glob": return `[${name}] ${input.pattern ?? ""}`;
+        case "Glob":
+            return `[${name}] ${input.pattern ?? ""}`;
         case "Bash": {
             let cmd = input.command ?? "";
             if (cmd.length > 80) cmd = cmd.slice(0, 77) + "...";
             return `[Bash] ${cmd}`;
         }
-        case "Agent": return `[Agent] ${input.description ?? ""}`;
-        case "TodoWrite": return `[TodoWrite]`;
-        default: return `[${name}]`;
+        case "Agent":
+            return `[Agent] ${input.description ?? ""}`;
+        case "TodoWrite":
+            return `[TodoWrite]`;
+        default:
+            return `[${name}]`;
     }
 }
 
@@ -1294,7 +1530,11 @@ function parseAndBroadcast(raw: string) {
     if (!trimmed) return;
 
     let obj: any;
-    try { obj = JSON.parse(trimmed); } catch { return; }
+    try {
+        obj = JSON.parse(trimmed);
+    } catch {
+        return;
+    }
 
     if (obj.type === "system" && obj.subtype === "init") {
         broadcastState();
@@ -1306,19 +1546,22 @@ function parseAndBroadcast(raw: string) {
         const usage = obj.usage;
         const modelUsage = obj.modelUsage;
         if (usage || modelUsage) {
-            state.tokens.inputTokens = (usage?.input_tokens ?? 0) +
+            state.tokens.inputTokens =
+                (usage?.input_tokens ?? 0) +
                 (usage?.cache_creation_input_tokens ?? 0) +
                 (usage?.cache_read_input_tokens ?? 0);
             state.tokens.outputTokens = usage?.output_tokens ?? 0;
             state.tokens.cacheReadTokens = usage?.cache_read_input_tokens ?? 0;
-            state.tokens.cacheWriteTokens = usage?.cache_creation_input_tokens ?? 0;
+            state.tokens.cacheWriteTokens =
+                usage?.cache_creation_input_tokens ?? 0;
             state.tokens.costUSD = obj.total_cost_usd ?? 0;
             sessionCostUSD += state.tokens.costUSD;
             state.tokens.numTurns = obj.num_turns ?? 0;
             // Get context window from first model entry
             if (modelUsage) {
                 const first = Object.values(modelUsage)[0] as any;
-                if (first?.contextWindow) state.tokens.contextWindow = first.contextWindow;
+                if (first?.contextWindow)
+                    state.tokens.contextWindow = first.contextWindow;
             }
             broadcastState();
         }
@@ -1335,17 +1578,26 @@ function parseAndBroadcast(raw: string) {
             broadcast("text", c.text);
 
             // Check for step markers
-            const stepMatch = c.text.match(/BLOXGEN_STEP:\s*(\d+\.?\d*-[A-Z_-]+)/);
+            const stepMatch = c.text.match(
+                /BLOXGEN_STEP:\s*(\d+\.?\d*-[A-Z_-]+)/,
+            );
             if (stepMatch) {
                 state.currentStep = stepMatch[1];
                 broadcast("step", state.currentStep);
-                writeStatus(`#${state.iteration} ${state.mode} — ${state.currentStep}`);
+                writeStatus(
+                    `#${state.iteration} ${state.mode} — ${state.currentStep}`,
+                );
                 saveCheckpoint();
                 broadcastState();
             }
 
             // Check for completion signals
-            const signals = ["BLOXGEN: COMPLETED", "BLOXGEN: STUCK", "BLOXGEN: IDEATED", "BLOXGEN: CRITIC_DONE"];
+            const signals = [
+                "BLOXGEN: COMPLETED",
+                "BLOXGEN: STUCK",
+                "BLOXGEN: IDEATED",
+                "BLOXGEN: CRITIC_DONE",
+            ];
             for (const signal of signals) {
                 if (c.text.includes(signal)) {
                     broadcast("signal", c.text);
@@ -1361,21 +1613,31 @@ function parseAndBroadcast(raw: string) {
 function runIteration(prompt: string, model?: string): Promise<void> {
     return new Promise((resolve) => {
         const timestamp = formatTimestamp();
-        const logFile = path.join(LOG_DIR, `bloxgen_${timestamp}_iter${state.iteration}.log`);
+        const logFile = path.join(
+            LOG_DIR,
+            `bloxgen_${timestamp}_iter${state.iteration}.log`,
+        );
         state.logFile = logFile;
 
         fs.mkdirSync(LOG_DIR, { recursive: true });
 
         const modelLabel = model ? ` | Model: ${model}` : "";
-        broadcast("text", `\n--- Iteration #${state.iteration} | Mode: ${state.mode}${modelLabel} ---\n`);
+        broadcast(
+            "text",
+            `\n--- Iteration #${state.iteration} | Mode: ${state.mode}${modelLabel} ---\n`,
+        );
 
         const args = [
-            "-p", prompt,
-            "--allowedTools", ALLOWED_TOOLS,
-            "--mcp-config", MCP_CONFIG,
+            "-p",
+            prompt,
+            "--allowedTools",
+            ALLOWED_TOOLS,
+            "--mcp-config",
+            MCP_CONFIG,
             "--strict-mcp-config",
             "--verbose",
-            "--output-format", "stream-json",
+            "--output-format",
+            "stream-json",
         ];
         if (model) args.push("--model", model);
 
@@ -1406,14 +1668,20 @@ function runIteration(prompt: string, model?: string): Promise<void> {
             claudeProcess = null;
             logStream.end();
 
-            broadcast("text", `\n--- Iteration #${state.iteration} finished (exit code: ${code}) ---\n`);
+            broadcast(
+                "text",
+                `\n--- Iteration #${state.iteration} finished (exit code: ${code}) ---\n`,
+            );
             resolve();
         });
 
         claude.on("error", (err) => {
             claudeProcess = null;
             logStream.end();
-            broadcast("signal", `ERROR: Failed to spawn claude: ${err.message}`);
+            broadcast(
+                "signal",
+                `ERROR: Failed to spawn claude: ${err.message}`,
+            );
             resolve();
         });
     });
@@ -1428,9 +1696,15 @@ async function runLoop(resume: boolean) {
 
     if (resume) {
         if (loadCheckpoint()) {
-            broadcast("text", `Resuming from checkpoint: iteration ${state.iteration}, built ${state.featuresBuilt}, ideated ${state.featuresIdeated}`);
+            broadcast(
+                "text",
+                `Resuming from checkpoint: iteration ${state.iteration}, built ${state.featuresBuilt}, ideated ${state.featuresIdeated}`,
+            );
             if (lastCheckpointFeature) {
-                broadcast("text", `Last feature: ${lastCheckpointFeature} (step: ${lastCheckpointStep})`);
+                broadcast(
+                    "text",
+                    `Last feature: ${lastCheckpointFeature} (step: ${lastCheckpointStep})`,
+                );
             }
             resumeFlag = true;
         } else {
@@ -1454,7 +1728,10 @@ async function runLoop(resume: boolean) {
     const studioOk = await checkStudioMcp(15);
     broadcast("text", `Studio MCP: ${studioOk ? "OK" : "FAIL"}`);
     if (!studioOk) {
-        broadcast("signal", "Studio MCP unreachable — open Roblox Studio with the MCP plugin enabled.");
+        broadcast(
+            "signal",
+            "Studio MCP unreachable — open Roblox Studio with the MCP plugin enabled.",
+        );
         state.status = "idle";
         state.mode = "IDLE";
         broadcastState();
@@ -1479,7 +1756,9 @@ async function runLoop(resume: boolean) {
         ) {
             state.mode = "CRITIC";
             currentPrompt = CRITIC_PROMPT;
-            modeDetail = forceCriticNext ? "manual critic requested" : `quality audit after ${state.featuresBuilt} builds`;
+            modeDetail = forceCriticNext
+                ? "manual critic requested"
+                : `quality audit after ${state.featuresBuilt} builds`;
             state.currentFeatureId = "";
             forceCriticNext = false;
         } else if (state.plannedCount < MIN_PLANNED_FEATURES) {
@@ -1491,7 +1770,7 @@ async function runLoop(resume: boolean) {
             // Check if we should auto-trigger parallel fix for easy/medium bugs
             const parallelBugs = getParallelBugs();
             if (parallelBugs.length >= 3 && parallelState.phase === "idle") {
-                const bugIds = parallelBugs.map(b => b.id);
+                const bugIds = parallelBugs.map((b) => b.id);
                 state.mode = "PARALLEL_FIX";
                 state.currentFeatureId = bugIds.join(", ");
                 modeDetail = `auto-parallel fixing ${parallelBugs.length} bugs: ${bugIds.join(", ")}`;
@@ -1500,26 +1779,37 @@ async function runLoop(resume: boolean) {
                 state.tokens = emptyTokens();
                 state.iterationStartedAt = new Date().toISOString();
                 broadcast("text", `\nMode: ${state.mode} — ${modeDetail}`);
-                writeStatus(`#${state.iteration} ${state.mode} — ${modeDetail}`);
+                writeStatus(
+                    `#${state.iteration} ${state.mode} — ${modeDetail}`,
+                );
                 broadcastState();
 
                 const idsBefore = listPlannedIds();
                 await spawnParallelAgents(parallelBugs);
 
                 // Check for graceful stop
-                const parallelPostStatus = state.status as BloxgenState["status"];
+                const parallelPostStatus =
+                    state.status as BloxgenState["status"];
                 if (parallelPostStatus === "stopping_graceful") {
-                    broadcast("text", "\nStopping after parallel fix (graceful stop requested).");
+                    broadcast(
+                        "text",
+                        "\nStopping after parallel fix (graceful stop requested).",
+                    );
                     break;
                 }
                 if (parallelPostStatus !== "running") break;
 
                 // Count what was completed
                 const idsAfter = listPlannedIds();
-                const newlyBuilt = idsBefore.filter(id => !idsAfter.includes(id));
+                const newlyBuilt = idsBefore.filter(
+                    (id) => !idsAfter.includes(id),
+                );
                 if (newlyBuilt.length > 0) {
                     state.featuresBuilt += newlyBuilt.length;
-                    broadcast("text", `Parallel fixed: ${newlyBuilt.join(", ")}`);
+                    broadcast(
+                        "text",
+                        `Parallel fixed: ${newlyBuilt.join(", ")}`,
+                    );
                 }
 
                 state.plannedCount = countPlanned();
@@ -1541,7 +1831,10 @@ async function runLoop(resume: boolean) {
                 if (feat.id === lastCheckpointFeature) {
                     const hint = `NOTE: A previous session was working on feature ${lastCheckpointFeature} and reached step ${lastCheckpointStep} before being interrupted. Some earlier steps may already be partially completed. Verify existing work before re-doing it — check if files already exist, if tests already pass, etc. Skip steps whose artifacts are already correct.\n\n`;
                     currentPrompt = hint + currentPrompt;
-                    broadcast("text", `Resume hint injected (feature ${lastCheckpointFeature} was at ${lastCheckpointStep})`);
+                    broadcast(
+                        "text",
+                        `Resume hint injected (feature ${lastCheckpointFeature} was at ${lastCheckpointStep})`,
+                    );
                 }
                 resumeFlag = false;
                 lastCheckpointFeature = "";
@@ -1550,7 +1843,10 @@ async function runLoop(resume: boolean) {
         }
 
         // Refinement mode: inject constraint into BUILD and IDEATE prompts
-        if (refinementMode && (state.mode === "BUILD" || state.mode === "IDEATE")) {
+        if (
+            refinementMode &&
+            (state.mode === "BUILD" || state.mode === "IDEATE")
+        ) {
             currentPrompt = REFINE_PROMPT + "\n\n" + currentPrompt;
             modeDetail += " [REFINEMENT MODE]";
         }
@@ -1566,23 +1862,29 @@ async function runLoop(resume: boolean) {
         const idsBefore = listPlannedIds();
 
         // Run the iteration with appropriate model
-        const iterModel = state.mode === "CRITIC" ? criticModel
-            : state.mode === "BUILD" && state.buildModel ? state.buildModel
-                : undefined;
+        const iterModel =
+            state.mode === "CRITIC"
+                ? criticModel
+                : state.mode === "BUILD" && state.buildModel
+                  ? state.buildModel
+                  : undefined;
         await runIteration(currentPrompt, iterModel);
 
         // Re-read status after async iteration (may have changed)
         const postStatus = state.status as BloxgenState["status"];
         if (postStatus === "stopping_graceful") {
-            broadcast("text", "\nStopping after iteration (graceful stop requested).");
+            broadcast(
+                "text",
+                "\nStopping after iteration (graceful stop requested).",
+            );
             break;
         }
         if (postStatus !== "running") break;
 
         // Detect results
         const idsAfter = listPlannedIds();
-        const newlyBuilt = idsBefore.filter(id => !idsAfter.includes(id));
-        const newlyPlanned = idsAfter.filter(id => !idsBefore.includes(id));
+        const newlyBuilt = idsBefore.filter((id) => !idsAfter.includes(id));
+        const newlyPlanned = idsAfter.filter((id) => !idsBefore.includes(id));
 
         if (newlyBuilt.length > 0) {
             state.featuresBuilt += newlyBuilt.length;
@@ -1602,8 +1904,15 @@ async function runLoop(resume: boolean) {
         broadcastState();
 
         // If ideation produced nothing and nothing is planned, game may be complete
-        if (state.plannedCount === 0 && newlyPlanned.length === 0 && state.mode === "IDEATE") {
-            broadcast("signal", "Ideation produced nothing — game may be complete!");
+        if (
+            state.plannedCount === 0 &&
+            newlyPlanned.length === 0 &&
+            state.mode === "IDEATE"
+        ) {
+            broadcast(
+                "signal",
+                "Ideation produced nothing — game may be complete!",
+            );
             break;
         }
 
@@ -1611,15 +1920,24 @@ async function runLoop(resume: boolean) {
         killStaleMcp();
 
         // Post-iteration Studio check
-        if (!await checkStudioMcp(15)) {
-            broadcast("signal", "Studio MCP unreachable after iteration. Waiting for reconnect...");
+        if (!(await checkStudioMcp(15))) {
+            broadcast(
+                "signal",
+                "Studio MCP unreachable after iteration. Waiting for reconnect...",
+            );
             let reconnected = false;
             for (let i = 0; i < 30 && state.status === "running"; i++) {
-                await new Promise(r => setTimeout(r, 10000));
-                if (await checkStudioMcp(10)) { reconnected = true; break; }
+                await new Promise((r) => setTimeout(r, 10000));
+                if (await checkStudioMcp(10)) {
+                    reconnected = true;
+                    break;
+                }
             }
             if (!reconnected) {
-                broadcast("signal", "Studio did not reconnect after 5 minutes. Stopping.");
+                broadcast(
+                    "signal",
+                    "Studio did not reconnect after 5 minutes. Stopping.",
+                );
                 break;
             }
             broadcast("text", "Studio reconnected! Resuming...");
@@ -1629,7 +1947,7 @@ async function runLoop(resume: boolean) {
         // Pause between iterations
         if (state.status === "running") {
             broadcast("text", `Next iteration in ${PAUSE_BETWEEN_SECS}s...`);
-            await new Promise(r => setTimeout(r, PAUSE_BETWEEN_SECS * 1000));
+            await new Promise((r) => setTimeout(r, PAUSE_BETWEEN_SECS * 1000));
         }
     }
 
@@ -1673,7 +1991,11 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/api/history") {
         const sessions: any[] = [];
         try {
-            const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith(".log")).sort().reverse();
+            const files = fs
+                .readdirSync(LOG_DIR)
+                .filter((f) => f.endsWith(".log"))
+                .sort()
+                .reverse();
             for (const file of files.slice(0, 30)) {
                 // Read only the last few KB to find the result line
                 const fullPath = path.join(LOG_DIR, file);
@@ -1681,12 +2003,20 @@ const server = http.createServer(async (req, res) => {
                 const readSize = Math.min(stat.size, 8192);
                 const buf = Buffer.alloc(readSize);
                 const fd = fs.openSync(fullPath, "r");
-                fs.readSync(fd, buf, 0, readSize, Math.max(0, stat.size - readSize));
+                fs.readSync(
+                    fd,
+                    buf,
+                    0,
+                    readSize,
+                    Math.max(0, stat.size - readSize),
+                );
                 fs.closeSync(fd);
                 const tail = buf.toString("utf-8");
 
                 // Extract timestamp from filename: bloxgen_YYYYMMDD_HHMMSS_iterN.log
-                const match = file.match(/bloxgen_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})_iter(\d+)/);
+                const match = file.match(
+                    /bloxgen_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})_iter(\d+)/,
+                );
                 if (!match) continue;
                 const [, y, mo, d, h, mi, s, iter] = match;
                 const timestamp = `${y}-${mo}-${d} ${h}:${mi}:${s}`;
@@ -1702,13 +2032,16 @@ const server = http.createServer(async (req, res) => {
                             iteration: parseInt(iter),
                             durationMs: result.duration_ms ?? 0,
                             numTurns: result.num_turns ?? 0,
-                            costUSD: (result.total_cost_usd ?? 0) / API_TO_PLAN_RATIO,
+                            costUSD:
+                                (result.total_cost_usd ?? 0) /
+                                API_TO_PLAN_RATIO,
                             outputTokens: result.usage?.output_tokens ?? 0,
-                            cacheReadTokens: result.usage?.cache_read_input_tokens ?? 0,
+                            cacheReadTokens:
+                                result.usage?.cache_read_input_tokens ?? 0,
                             result: (result.result ?? "").slice(0, 200),
                             isError: result.is_error ?? false,
                         });
-                    } catch { }
+                    } catch {}
                 } else {
                     // No result line — session may have been interrupted
                     sessions.push({
@@ -1725,7 +2058,7 @@ const server = http.createServer(async (req, res) => {
                     });
                 }
             }
-        } catch { }
+        } catch {}
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(sessions));
         return;
@@ -1736,12 +2069,16 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, {
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
+            Connection: "keep-alive",
         });
-        res.write(`event: state\ndata: ${JSON.stringify(getPublicState())}\n\n`);
+        res.write(
+            `event: state\ndata: ${JSON.stringify(getPublicState())}\n\n`,
+        );
         // Replay buffered output so page reloads see previous events
         for (const entry of outputBuffer) {
-            res.write(`event: ${entry.event}\ndata: ${JSON.stringify(entry.data)}\n\n`);
+            res.write(
+                `event: ${entry.event}\ndata: ${JSON.stringify(entry.data)}\n\n`,
+            );
         }
         sseClients.add(res);
         req.on("close", () => sseClients.delete(res));
@@ -1793,11 +2130,17 @@ const server = http.createServer(async (req, res) => {
     // POST /api/critic-model — toggle critic model (haiku/sonnet/opus)
     if (req.method === "POST" && url.pathname === "/api/critic-model") {
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { model } = JSON.parse(body);
-                if (model === "haiku" || model === "sonnet" || model === "opus") {
+                if (
+                    model === "haiku" ||
+                    model === "sonnet" ||
+                    model === "opus"
+                ) {
                     criticModel = model;
                     broadcast("text", `Critic model set to: ${model}`);
                     broadcastState();
@@ -1805,7 +2148,11 @@ const server = http.createServer(async (req, res) => {
                     res.end(JSON.stringify({ ok: true, model: criticModel }));
                 } else {
                     res.writeHead(400, { "Content-Type": "application/json" });
-                    res.end(JSON.stringify({ error: "Invalid model. Use haiku, sonnet, or opus." }));
+                    res.end(
+                        JSON.stringify({
+                            error: "Invalid model. Use haiku, sonnet, or opus.",
+                        }),
+                    );
                 }
             } catch {
                 res.writeHead(400, { "Content-Type": "application/json" });
@@ -1818,13 +2165,18 @@ const server = http.createServer(async (req, res) => {
     // POST /api/refinement-mode — toggle refinement mode
     if (req.method === "POST" && url.pathname === "/api/refinement-mode") {
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { enabled } = JSON.parse(body);
                 refinementMode = !!enabled;
                 saveCheckpoint();
-                broadcast("text", `Refinement mode ${refinementMode ? "enabled" : "disabled"}`);
+                broadcast(
+                    "text",
+                    `Refinement mode ${refinementMode ? "enabled" : "disabled"}`,
+                );
                 broadcastState();
                 res.writeHead(200, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ ok: true, refinementMode }));
@@ -1865,7 +2217,10 @@ const server = http.createServer(async (req, res) => {
         }
         state.status = "stopping_graceful";
         broadcastState();
-        broadcast("text", "\nGraceful stop requested — will stop after current iteration finishes.");
+        broadcast(
+            "text",
+            "\nGraceful stop requested — will stop after current iteration finishes.",
+        );
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
         return;
@@ -1875,7 +2230,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/api/kill-mcp") {
         killStaleMcp();
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true, message: "Stale MCP processes killed" }));
+        res.end(
+            JSON.stringify({ ok: true, message: "Stale MCP processes killed" }),
+        );
         broadcast("text", "Killed stale MCP processes (manual)");
         return;
     }
@@ -1883,13 +2240,20 @@ const server = http.createServer(async (req, res) => {
     // POST /api/run-sim — run the progression simulator and return JSON results
     if (req.method === "POST" && url.pathname === "/api/run-sim") {
         try {
-            const runnerPath = path.join(PROJECT_ROOT, "tests", "lune", "runner.luau");
+            const runnerPath = path.join(
+                PROJECT_ROOT,
+                "tests",
+                "lune",
+                "runner.luau",
+            );
             const output = execSync(`lune run "${runnerPath}" -- --json`, {
                 cwd: PROJECT_ROOT,
                 encoding: "utf-8",
                 timeout: 60000,
             });
-            const jsonLine = output.split("\n").find((l: string) => l.startsWith("SIMJSON:"));
+            const jsonLine = output
+                .split("\n")
+                .find((l: string) => l.startsWith("SIMJSON:"));
             if (jsonLine) {
                 const data = JSON.parse(jsonLine.slice("SIMJSON:".length));
                 res.writeHead(200, { "Content-Type": "application/json" });
@@ -1908,8 +2272,10 @@ const server = http.createServer(async (req, res) => {
     // GET /api/user-todo — parse USER_TODO.md for tasks, TODO.md for feedback messages
     if (req.method === "GET" && url.pathname === "/api/user-todo") {
         try {
-            const tasks: { category: string; text: string; done: boolean }[] = [];
-            const messages: { id: number; timestamp: string; text: string }[] = [];
+            const tasks: { category: string; text: string; done: boolean }[] =
+                [];
+            const messages: { id: number; timestamp: string; text: string }[] =
+                [];
 
             // Parse tasks from USER_TODO.md
             try {
@@ -1930,7 +2296,7 @@ const server = http.createServer(async (req, res) => {
                         });
                     }
                 }
-            } catch { }
+            } catch {}
 
             // Parse feedback messages from TODO.md "## User Feedback" section
             try {
@@ -1948,18 +2314,28 @@ const server = http.createServer(async (req, res) => {
                     }
                     if (inFeedback) {
                         if (line.startsWith("Prioritize these")) continue;
-                        const msgMatch = line.match(/^- \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] (.+)$/);
+                        const msgMatch = line.match(
+                            /^- \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] (.+)$/,
+                        );
                         if (msgMatch) {
-                            messages.push({ id: msgId++, timestamp: msgMatch[1], text: msgMatch[2] });
+                            messages.push({
+                                id: msgId++,
+                                timestamp: msgMatch[1],
+                                text: msgMatch[2],
+                            });
                             continue;
                         }
                         const trimmed = line.trim();
                         if (trimmed && trimmed !== "---") {
-                            messages.push({ id: msgId++, timestamp: "", text: trimmed });
+                            messages.push({
+                                id: msgId++,
+                                timestamp: "",
+                                text: trimmed,
+                            });
                         }
                     }
                 }
-            } catch { }
+            } catch {}
 
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ tasks, messages }));
@@ -1973,7 +2349,9 @@ const server = http.createServer(async (req, res) => {
     // POST /api/user-task-toggle — toggle a task's done state by index
     if (req.method === "POST" && url.pathname === "/api/user-task-toggle") {
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { id } = JSON.parse(body);
@@ -1993,7 +2371,10 @@ const server = http.createServer(async (req, res) => {
                     if (taskMatch) {
                         if (taskIdx === id) {
                             const nowDone = taskMatch[1] === " ";
-                            lines[i] = lines[i].replace(/^- \[[ x]\]/, `- [${nowDone ? "x" : " "}]`);
+                            lines[i] = lines[i].replace(
+                                /^- \[[ x]\]/,
+                                `- [${nowDone ? "x" : " "}]`,
+                            );
                             found = true;
                             break;
                         }
@@ -2020,7 +2401,9 @@ const server = http.createServer(async (req, res) => {
     // POST /api/user-feedback — append a new timestamped message to TODO.md User Feedback section
     if (req.method === "POST" && url.pathname === "/api/user-feedback") {
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { text } = JSON.parse(body);
@@ -2038,11 +2421,18 @@ const server = http.createServer(async (req, res) => {
                 let insertIdx = -1;
                 let inFeedback = false;
                 for (let i = 0; i < lines.length; i++) {
-                    if (lines[i].replace(/\r$/, "").startsWith("## User Feedback")) {
+                    if (
+                        lines[i]
+                            .replace(/\r$/, "")
+                            .startsWith("## User Feedback")
+                    ) {
                         inFeedback = true;
                         continue;
                     }
-                    if (inFeedback && lines[i].replace(/\r$/, "").startsWith("## ")) {
+                    if (
+                        inFeedback &&
+                        lines[i].replace(/\r$/, "").startsWith("## ")
+                    ) {
                         insertIdx = i;
                         break;
                     }
@@ -2068,13 +2458,17 @@ const server = http.createServer(async (req, res) => {
     // PUT /api/user-feedback — update a specific message by id in TODO.md User Feedback section
     if (req.method === "PUT" && url.pathname === "/api/user-feedback") {
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { id, text } = JSON.parse(body);
                 if (typeof id !== "number" || !text?.trim()) {
                     res.writeHead(400, { "Content-Type": "application/json" });
-                    res.end(JSON.stringify({ error: "Invalid id or empty text" }));
+                    res.end(
+                        JSON.stringify({ error: "Invalid id or empty text" }),
+                    );
                     return;
                 }
                 const content = fs.readFileSync(TODO_FILE, "utf-8");
@@ -2085,19 +2479,27 @@ const server = http.createServer(async (req, res) => {
 
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].replace(/\r$/, "");
-                    if (line.startsWith("## User Feedback")) { inFeedback = true; continue; }
+                    if (line.startsWith("## User Feedback")) {
+                        inFeedback = true;
+                        continue;
+                    }
                     if (inFeedback && line.startsWith("## ")) break;
                     if (!inFeedback) continue;
                     if (line.startsWith("Prioritize these")) continue;
-                    const isMsgLine = line.match(/^- \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] /) ||
+                    const isMsgLine =
+                        line.match(/^- \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] /) ||
                         (line.trim() && line.trim() !== "---");
                     if (isMsgLine) {
                         if (msgIdx === id) {
-                            const tsMatch = line.match(/^- \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/);
-                            const ts = tsMatch ? tsMatch[1] : (() => {
-                                const now = new Date();
-                                return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-                            })();
+                            const tsMatch = line.match(
+                                /^- \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/,
+                            );
+                            const ts = tsMatch
+                                ? tsMatch[1]
+                                : (() => {
+                                      const now = new Date();
+                                      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+                                  })();
                             lines[i] = `- [${ts}] ${text.trim()}`;
                             found = true;
                             break;
@@ -2125,7 +2527,9 @@ const server = http.createServer(async (req, res) => {
     // DELETE /api/user-feedback — remove a specific message by id from TODO.md User Feedback section
     if (req.method === "DELETE" && url.pathname === "/api/user-feedback") {
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { id } = JSON.parse(body);
@@ -2142,11 +2546,15 @@ const server = http.createServer(async (req, res) => {
 
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].replace(/\r$/, "");
-                    if (line.startsWith("## User Feedback")) { inFeedback = true; continue; }
+                    if (line.startsWith("## User Feedback")) {
+                        inFeedback = true;
+                        continue;
+                    }
                     if (inFeedback && line.startsWith("## ")) break;
                     if (!inFeedback) continue;
                     if (line.startsWith("Prioritize these")) continue;
-                    const isMsgLine = line.match(/^- \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] /) ||
+                    const isMsgLine =
+                        line.match(/^- \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] /) ||
                         (line.trim() && line.trim() !== "---");
                     if (isMsgLine) {
                         if (msgIdx === id) {
@@ -2177,7 +2585,9 @@ const server = http.createServer(async (req, res) => {
     // POST /api/chat — Q&A: spawn claude with game context, stream answer, detect bugs
     if (req.method === "POST" && url.pathname === "/api/chat") {
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { question } = JSON.parse(body);
@@ -2193,10 +2603,18 @@ const server = http.createServer(async (req, res) => {
                     "Cache-Control": "no-cache",
                 });
 
-                let featuresContent = "", gddContent = "", todoContent = "";
-                try { featuresContent = fs.readFileSync(FEATURES_FILE, "utf-8"); } catch { }
-                try { gddContent = fs.readFileSync(GDD_FILE, "utf-8"); } catch { }
-                try { todoContent = fs.readFileSync(TODO_FILE, "utf-8"); } catch { }
+                let featuresContent = "",
+                    gddContent = "",
+                    todoContent = "";
+                try {
+                    featuresContent = fs.readFileSync(FEATURES_FILE, "utf-8");
+                } catch {}
+                try {
+                    gddContent = fs.readFileSync(GDD_FILE, "utf-8");
+                } catch {}
+                try {
+                    todoContent = fs.readFileSync(TODO_FILE, "utf-8");
+                } catch {}
 
                 const nextBugId = getNextBugId();
 
@@ -2228,18 +2646,30 @@ ${todoContent}
 ## User Question
 ${question}`;
 
-                const claude = spawn("claude", [
-                    "-p", chatPrompt,
-                    "--allowedTools", "Read,Glob,Grep",
-                    "--verbose",
-                    "--output-format", "stream-json",
-                ], {
-                    cwd: PROJECT_ROOT,
-                    env: process.env,
-                    stdio: ["ignore", "pipe", "pipe"],
-                });
+                const claude = spawn(
+                    "claude",
+                    [
+                        "-p",
+                        chatPrompt,
+                        "--allowedTools",
+                        "Read,Glob,Grep",
+                        "--verbose",
+                        "--output-format",
+                        "stream-json",
+                    ],
+                    {
+                        cwd: PROJECT_ROOT,
+                        env: process.env,
+                        stdio: ["ignore", "pipe", "pipe"],
+                    },
+                );
 
-                let bugDetected: { id: string; description: string; severity: string; systems: string } | null = null;
+                let bugDetected: {
+                    id: string;
+                    description: string;
+                    severity: string;
+                    systems: string;
+                } | null = null;
 
                 const rl = createInterface({ input: claude.stdout! });
                 rl.on("line", (raw: string) => {
@@ -2247,7 +2677,11 @@ ${question}`;
                     if (!trimmed) return;
 
                     let obj: any;
-                    try { obj = JSON.parse(trimmed); } catch { return; }
+                    try {
+                        obj = JSON.parse(trimmed);
+                    } catch {
+                        return;
+                    }
 
                     if (obj.type !== "assistant") return;
                     const content = obj.message?.content;
@@ -2255,15 +2689,31 @@ ${question}`;
 
                     for (const c of content) {
                         if (c.type === "text" && c.text?.trim()) {
-                            const bugMatch = c.text.match(/BLOXGEN_BUG:\s*(\{.*\})/);
+                            const bugMatch = c.text.match(
+                                /BLOXGEN_BUG:\s*(\{.*\})/,
+                            );
                             if (bugMatch) {
-                                try { bugDetected = JSON.parse(bugMatch[1]); } catch { }
-                                const cleanText = c.text.replace(/BLOXGEN_BUG:\s*\{.*\}/, "").trim();
+                                try {
+                                    bugDetected = JSON.parse(bugMatch[1]);
+                                } catch {}
+                                const cleanText = c.text
+                                    .replace(/BLOXGEN_BUG:\s*\{.*\}/, "")
+                                    .trim();
                                 if (cleanText) {
-                                    res.write(JSON.stringify({ type: "text", data: cleanText }) + "\n");
+                                    res.write(
+                                        JSON.stringify({
+                                            type: "text",
+                                            data: cleanText,
+                                        }) + "\n",
+                                    );
                                 }
                             } else {
-                                res.write(JSON.stringify({ type: "text", data: c.text }) + "\n");
+                                res.write(
+                                    JSON.stringify({
+                                        type: "text",
+                                        data: c.text,
+                                    }) + "\n",
+                                );
                             }
                         }
                     }
@@ -2271,18 +2721,30 @@ ${question}`;
 
                 claude.on("exit", () => {
                     if (bugDetected) {
-                        appendBugToTodo(bugDetected.id, bugDetected.description, bugDetected.severity, bugDetected.systems);
-                        res.write(JSON.stringify({ type: "bug", bugId: bugDetected.id }) + "\n");
+                        appendBugToTodo(
+                            bugDetected.id,
+                            bugDetected.description,
+                            bugDetected.severity,
+                            bugDetected.systems,
+                        );
+                        res.write(
+                            JSON.stringify({
+                                type: "bug",
+                                bugId: bugDetected.id,
+                            }) + "\n",
+                        );
                     }
                     res.write(JSON.stringify({ type: "done" }) + "\n");
                     res.end();
                 });
 
                 claude.on("error", (err) => {
-                    res.write(JSON.stringify({ type: "error", data: err.message }) + "\n");
+                    res.write(
+                        JSON.stringify({ type: "error", data: err.message }) +
+                            "\n",
+                    );
                     res.end();
                 });
-
             } catch (err: any) {
                 res.writeHead(400, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ error: err.message }));
@@ -2306,7 +2768,7 @@ ${question}`;
             res.end(JSON.stringify(parallelState.testOutput));
             return;
         }
-        const agent = parallelState.agents.find(a => a.id === agentId);
+        const agent = parallelState.agents.find((a) => a.id === agentId);
         if (!agent) {
             res.writeHead(404, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "Agent not found" }));
@@ -2321,24 +2783,35 @@ ${question}`;
     if (req.method === "POST" && url.pathname === "/api/parallel/start") {
         if (parallelState.phase !== "idle") {
             res.writeHead(409, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Parallel session already active" }));
+            res.end(
+                JSON.stringify({ error: "Parallel session already active" }),
+            );
             return;
         }
         let body = "";
-        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+        });
         req.on("end", () => {
             try {
                 const { bugIds } = JSON.parse(body);
                 if (!Array.isArray(bugIds) || bugIds.length === 0) {
                     res.writeHead(400, { "Content-Type": "application/json" });
-                    res.end(JSON.stringify({ error: "bugIds must be a non-empty array" }));
+                    res.end(
+                        JSON.stringify({
+                            error: "bugIds must be a non-empty array",
+                        }),
+                    );
                     return;
                 }
                 res.writeHead(200, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ ok: true, count: bugIds.length }));
                 // Fire and forget
                 spawnParallelAgents(bugIds).catch((err) => {
-                    broadcast("signal", `Parallel session crashed: ${err.message}`);
+                    broadcast(
+                        "signal",
+                        `Parallel session crashed: ${err.message}`,
+                    );
                     parallelState.phase = "idle";
                     broadcastParallel();
                 });
@@ -2400,7 +2873,7 @@ export function startDashboard(port: number = 7377) {
                 });
             }
             console.log("(URL copied to clipboard)");
-        } catch { }
+        } catch {}
     });
 
     process.on("SIGINT", () => {
