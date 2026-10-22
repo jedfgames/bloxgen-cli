@@ -7,3 +7,10 @@
 Build/
 node_modules/
 sourcemap.json
+
+# Project
+/CONTEXT.md
+
+# Worktrees
+/.worktrees/
+/.wt/
