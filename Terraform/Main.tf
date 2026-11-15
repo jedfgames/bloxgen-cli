@@ -36,21 +36,21 @@ locals {
 
     # Must match the job `name:` fields of every workflow that runs on PRs to main.
     main_checks = [
-        "Build binary",
-        "Check formatting",
-        "Check version match",
-        "Type check",
-        "Validate branch name"
+        "build-binary",
+        "check-formatting",
+        "check-version-match",
+        "typecheck",
+        "validate-branch-name"
     ]
 
     # Must match the job `name:` fields of every workflow that runs on PRs to release.
     release_checks = [
-        "Build binary",
-        "Check formatting",
-        "Type check",
-        "Validate PR title",
-        "Validate version",
-        "Verify diff matches main"
+        "build-binary",
+        "check-formatting",
+        "typecheck",
+        "validate-pr-title",
+        "validate-version",
+        "verify-diff-matches-main"
     ]
 }
 

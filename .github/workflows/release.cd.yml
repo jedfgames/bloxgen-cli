@@ -1,4 +1,4 @@
-name: Publish release
+name: Release / CD
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.platform }}
+    name: build-${{ matrix.platform }}
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -16,7 +16,7 @@ jobs:
             platform: macos-aarch64
             target: bun-darwin-arm64
             artifact: bloxgen-macos-aarch64
-          - runner: macos-13
+          - runner: macos-15-intel
             platform: macos-x86_64
             target: bun-darwin-x64
             artifact: bloxgen-macos-x86_64
@@ -64,8 +64,8 @@ jobs:
           name: ${{ matrix.artifact }}
           path: Build/${{ matrix.artifact }}.zip
 
-  release:
-    name: Create release
+  create-release:
+    name: create-release
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -79,8 +79,8 @@ jobs:
         id: version
         run: |
           VERSION=$(cat VERSION | tr -d '[:space:]')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
 
           CHANGELOG=$(awk -v ver="$VERSION" '
             /^## / {

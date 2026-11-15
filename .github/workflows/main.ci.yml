@@ -1,4 +1,4 @@
-name: CI
+name: Main / CI
 
 on:
   pull_request:
@@ -6,8 +6,8 @@ on:
       - main
 
 jobs:
-  branch-naming:
-    name: Validate branch name
+  validate-branch-name:
+    name: validate-branch-name
     runs-on: ubuntu-latest
     steps:
       - name: Check branch name format
@@ -16,21 +16,16 @@ jobs:
         run: |
           echo "Checking branch name: $BRANCH"
 
-          if [[ ! "$BRANCH" =~ ^(feature|bugfix|hotfix|chore|docs|refactor|test)/ ]]; then
-            echo "::error::Branch name must start with a valid prefix (feature/, bugfix/, hotfix/, chore/, docs/, refactor/, test/)"
-            exit 1
-          fi
-
-          SUFFIX="${BRANCH#*/}"
-          if [[ ! "$SUFFIX" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-            echo "::error::Branch name after prefix must be lowercase kebab-case (e.g., feature/my-new-feature)"
+          # Must be <prefix>/<name>, with both parts in lowercase kebab-case
+          if [[ ! "$BRANCH" =~ ^[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+            echo "::error::Branch name must be <prefix>/<name> in lowercase kebab-case (e.g., feature/my-new-feature)"
             exit 1
           fi
 
           echo "Branch name is valid."
 
-  format:
-    name: Check formatting
+  check-formatting:
+    name: check-formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -46,7 +41,7 @@ jobs:
         run: bun run format:check
 
   typecheck:
-    name: Type check
+    name: typecheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -61,8 +56,8 @@ jobs:
       - name: Type check
         run: bun run typecheck
 
-  build:
-    name: Build binary
+  build-binary:
+    name: build-binary
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -80,8 +75,8 @@ jobs:
       - name: Verify binary runs
         run: ./Build/bloxgen version
 
-  version-match:
-    name: Check version match
+  check-version-match:
+    name: check-version-match
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -1,4 +1,4 @@
-name: Release checks
+name: Release / CI
 
 on:
   pull_request:
@@ -7,8 +7,8 @@ on:
       - release
 
 jobs:
-  pr-title:
-    name: Validate PR title
+  validate-pr-title:
+    name: validate-pr-title
     runs-on: ubuntu-latest
     steps:
       - name: Check PR title format
@@ -24,8 +24,8 @@ jobs:
 
           echo "PR title is valid."
 
-  diff-check:
-    name: Verify diff matches main
+  verify-diff-matches-main:
+    name: verify-diff-matches-main
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -48,8 +48,8 @@ jobs:
 
           echo "PR branch matches main exactly."
 
-  format:
-    name: Check formatting
+  check-formatting:
+    name: check-formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -65,7 +65,7 @@ jobs:
         run: bun run format:check
 
   typecheck:
-    name: Type check
+    name: typecheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -80,8 +80,8 @@ jobs:
       - name: Type check
         run: bun run typecheck
 
-  build:
-    name: Build binary
+  build-binary:
+    name: build-binary
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -99,8 +99,8 @@ jobs:
       - name: Verify binary runs
         run: ./Build/bloxgen version
 
-  version:
-    name: Validate version
+  validate-version:
+    name: validate-version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
