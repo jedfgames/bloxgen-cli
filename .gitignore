@@ -14,3 +14,8 @@ sourcemap.json
 # Worktrees
 /.worktrees/
 /.wt/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
